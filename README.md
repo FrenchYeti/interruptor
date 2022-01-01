@@ -4,6 +4,8 @@ The [future] home for Interruptor, a human-friendly interrupts hook library base
 
 Interruptor is the interrupts/systemcall hooking system from Dexcalibur.
 
+The purpose of this library is to provide to Frida users, a rich API able to produce **strace-like** trace + hook + configurable syscall args API.
+
 ## Requirements
 
 * frida
