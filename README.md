@@ -10,10 +10,24 @@ The purpose of this library is to provide to Frida users, a rich API able to pro
 
 
 
+
+
 ## 1. Requirements
 
+**Requirements :**
 * frida
 * frida-compile
+
+**Install :**
+Only from source for now (will move to NPM ASAP)
+```
+git clone https://github.com/FrenchYeti/interruptor
+cd interruptor
+npm install
+frida-compile examples/simple_strace.js -o trace.js && frida -U -f <PACKAGE> -l trace.js
+```
+
+
 
 ## 2. Supports
 
