@@ -15,10 +15,12 @@ The purpose of this library is to provide to Frida users, a rich API able to pro
 ## 1. Requirements
 
 **Requirements :**
+
 * frida
 * frida-compile
 
 **Install :**
+
 Only from source for now (will move to NPM ASAP)
 ```
 git clone https://github.com/FrenchYeti/interruptor
@@ -27,7 +29,24 @@ npm install
 frida-compile examples/simple_strace.js -o trace.js && frida -U -f <PACKAGE> -l trace.js
 ```
 
+**Example**
 
+Simple tracing without hook, with filtered module and syscall (by name)
+```
+var Interruptor = require('../dist/index.js').default.LinuxArm64();
+
+Java.deoptimizeEverything();
+
+Java.perform( ()=> {
+    Interruptor.newAgentTracer({
+        tid: Process.getCurrentThreadId(),
+        exclude: {
+            modules: ["linker64"],
+            syscalls: ["clock_gettime"]
+        }
+    }).start();
+})
+```
 
 ## 2. Supports
 
