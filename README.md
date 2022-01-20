@@ -34,6 +34,7 @@ Only from source for now (will move to NPM ASAP)
 git clone https://github.com/FrenchYeti/interruptor
 cd interruptor
 npm install
+npx tsc
 frida-compile examples/simple_strace.js -o trace.js && frida -U -f <PACKAGE> -l trace.js
 ```
 
