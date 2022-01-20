@@ -5,5 +5,7 @@ export enum L {
     FD,
     FLAG,
     ATTRMODE,
-    O_FLAGS
+    O_FLAGS,
+    VADDR,
+    MPROT
 }
