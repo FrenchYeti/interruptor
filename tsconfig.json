@@ -5,6 +5,7 @@
     "module": "commonjs",
     "declaration": true,
     "outDir": "./dist",
+    "removeComments": true,
     "typeRoots": [
       "node_modules/@types"
     ],
