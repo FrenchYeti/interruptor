@@ -6,6 +6,9 @@ let CTR = 0;
 
 export class InterruptorAgent {
 
+    static FLAVOR_DXC = "dxc";
+    static FLAVOR_STRACE= "strace";
+
     uid:number = 0;
 
     ranges: any = new Map();
@@ -22,6 +25,15 @@ export class InterruptorAgent {
     };
     moduleFilter: any = null;
 
+    output:any = {
+        flavor: "dxc",
+        tid: true,
+        pid: false,
+        module: true,
+        highlight: {
+            syscalls: []
+        }
+    }
 
     constructor( pOptions:any) {
         this.uid = CTR++;
@@ -52,8 +64,15 @@ export class InterruptorAgent {
                     this.followThread = (typeof pConfig.followFork !== "boolean" ? false : pConfig.followFork);
                     break;
                 case 'exclude':
-                    this.exclude = pConfig.exclude;
-                    break;;
+                    for(k in pConfig.exclude){
+                        this.exclude[k] = pConfig.exclude[k];
+                    }
+                    break;
+                case 'output':
+                    for(k in pConfig.output){
+                        this.output[k] = pConfig.output[k];
+                    }
+                    break;
                 case 'moduleFilter':
                     this.moduleFilter = pConfig.moduleFilter;
                     break;
