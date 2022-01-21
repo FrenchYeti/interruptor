@@ -40,22 +40,18 @@ frida-compile examples/simple_strace.js -o trace.js && frida -U -f <PACKAGE> -l 
 
 **Example**
 
-Simple tracing without hook, with filtered module and syscall (by name)
+#### Simple tracing
+Simple tracing without hook from attach moment, with excluded module and syscall (by name)
 ```
 var Interruptor = require('../dist/index.js').default.LinuxArm64();
 
-// not mandatory
-Java.deoptimizeEverything();
+Interruptor.newAgentTracer({
+    exclude: {
+        modules: ["linker64"],
+        syscalls: ["clock_gettime"]
+    }
+}).start();
 
-Java.perform( ()=> {
-    Interruptor.newAgentTracer({
-        tid: Process.getCurrentThreadId(),
-        exclude: {
-            modules: ["linker64"],
-            syscalls: ["clock_gettime"]
-        }
-    }).start();
-})
 ```
 
 Output :
@@ -75,6 +71,49 @@ Output :
 [/system/lib64/libc.so +0xd14]   SVC :: 0xa7   prctl ( int option = 0x53564d41 , unsigned long arg2 = 0x0 , unsigned long arg3 = 0x762f441000 , unsigned long arg4 = 0x3000 , unsigned long arg5 = 0x76b72f360e ,  )    > 0x0
 [/system/lib64/libc.so +0x1f28]   SVC :: 0xdc   clone ( unsigned long = 0x3d0f00 , unsigned long = 0x7611f704e0 , int * = 0x7611f70500 , int * = 0x7611f70588 , unsigned long = 0x7611f70500 ,  )    > 0x6ae
 ```
+
+More complete example are provided into examples directory.
+
+#### Simple tracing with hooked "read" syscall and dynamic loading
+
+```
+Interruptor.newAgentTracer({
+    exclude: {
+        syscalls: ["clock_gettime"]
+    },
+    svc: {
+         read: {
+             onLeave: function(ctx){
+                 let res = Memory.scanSync(ctx.x1, ctx.x2.toInt32(), Interruptor.utils().toScanPattern('frida'));
+                 if(res.length > 0){
+                     res.map( m => m.address.writeByteArray([0x41,0x41,0x41,0x41,0x41]));
+                     console.log("remove 'frida' pattern from resulting buffer");
+                 }
+             }
+         }
+    }
+}).startOnLoad(/<YOUR_LIB>/g); 
+
+```
+
+
+#### Simple tracing with coverage
+
+```
+Interruptor.newAgentTracer({
+    exclude: {
+        syscalls: ["clock_gettime"]
+    },
+    coverage: {
+        enabled: true,
+        fname: "/data/data/<YOUR_APP>/test.drcov",
+        stops: {
+            count: 2000 // stop after 2000 basic blocks captured
+        }
+    }
+}).startOnLoad(/<YOUR_LIB>/g);
+```
+
 ## 2. Supports
 
 **Architectures**
@@ -100,6 +139,8 @@ Output :
 | Incremental drcov | Instead of writing all coverage data one time into output file, update it at runtime to handle case where process crashes |   |
 
 ## 4. Documentation
+
+[TODO]
 
 There are mainly two way to hook interrupts depending of yours needs.
 
