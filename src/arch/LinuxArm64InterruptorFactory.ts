@@ -14,7 +14,7 @@ import {LinuxArm64InterruptorAgent} from "./LinuxArm64InterruptorAgent";
 export class LinuxArm64InterruptorFactory extends AbstractInterruptorFactory {
 
 
-    agent: InterruptorAgent = null;
+    //agents: InterruptorAgent[] = null;
 
     constructor( pOptions:any = null) {
         super(pOptions);
@@ -31,7 +31,8 @@ export class LinuxArm64InterruptorFactory extends AbstractInterruptorFactory {
      * @param pConfig
      */
     newAgentTracer(pConfig: any):InterruptorAgent {
-        //this.agent =  new LinuxArm64InterruptorAgent(this);
+        //const agent = new LinuxArm64InterruptorAgent(pConfig);
+
         return new LinuxArm64InterruptorAgent(pConfig);
     }
 

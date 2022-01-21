@@ -105,8 +105,9 @@ const SVC = [
         {t:T.UINT32, n:"whence", l:L.SIZE}]],
     [63,"read",0x3f,[
         {t:T.UINT32, n:"fd", l:L.FD},
-        {t:T.CHAR_BUFFER, n:"buf"},
-        {t:T.UINT32, n:"count", l:L.SIZE}]],
+        {t:T.POINTER64, n:"buf", l:L.OUTPUT_BUFFER},
+        {t:T.UINT32, n:"count", l:L.SIZE}
+    ], {t:T.UINT32, r:1, n:"sz", l:L.SIZE}],
     [64,"write",0x40,[
         {t:T.UINT32, n:"fd", l:L.FD},
         {t:T.CHAR_BUFFER, n:"buf", c:true},
@@ -459,11 +460,51 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
         return l;
     }
 
+    startOnLoad( pModuleRegExp:RegExp, pCondition:any = null):any {
+        let self=this, do_dlopen = null, call_ctor = null, match=null;
+        Process.findModuleByName('linker64').enumerateSymbols().forEach(sym => {
+            if (sym.name.indexOf('do_dlopen') >= 0) {
+                do_dlopen = sym.address;
+            } else if (sym.name.indexOf('call_constructor') >= 0) {
+                call_ctor = sym.address;
+            }
+        });
+
+        Interceptor.attach(do_dlopen, function (args) {
+            const p = args[0].readUtf8String();
+
+            if(p!=null && pModuleRegExp.exec(p) != null){
+                console.log(p);
+                match = p;
+            }
+        });
+
+        Interceptor.attach(call_ctor, {
+            onEnter:function () {
+                if(match==null) return;
+
+                if(pCondition!==null){
+                    if(!(pCondition)(match, this)){
+                        match = null;
+                        return ;
+                    }
+                }
+
+                console.warn("[INTERRUPTOR][STARTING] Module '"+match+"' is loading, tracer will start");
+                match = null;
+                self.start();
+
+            }
+        });
+
+
+
+    }
+
     traceSyscall( pContext:any, pHookCfg:any = null){
 
-        // skip excluded syscall by name
-        // todo : optimize comparison by replacing syscall name list by syscall number list
         if(this.exclude.svc.indexOf(pContext.x8.toInt32())>-1) return;
+
 
         const sys = SVC_MAP_NUM[ pContext.x8.toInt32() ];
         var inst = "SVC";
@@ -476,97 +517,63 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
 
         pContext.dxcRET = sys[SVC_RET];
 
-        let s = "", u ="";
-        switch(sys[SVC_NAME]){
+        let s = "", p= "";
+        pContext.dxcOpts = [];
+        sys[3].map((vVal,vOff) => {
+            const rVal = pContext["x"+vOff];
+            if(typeof vVal === "string"){
+                p += `${vVal} = ${rVal} , `;
+            }else{
+                p += `${vVal.n} = `;
 
-            /*case 'read':
-                s = "read ("+pContext.dxcFD[pContext.x0.toInt32()]+" ("+pContext.x0.toInt32()+"), " +pContext.x1+", " +pContext.x2.toInt32()+" ) ";
-
-                //console.log( ' ['+loc+']   \x1b[35;01m' + inst + ' ('+pContext.x8+')\x1b[0m Syscall='+s+'  [lr='+pContext.lr+']');
-                //console.log( ' ['+RX.mmlookup(pContext.pc)+']   \x1b[35;01m' + inst + ' ('+pContext.x8+')\x1b[0m Syscall='+s+'  [lr='+pContext.lr.sub(begin)+']');
-                pContext.dxcLastRead = pContext.dxcFD[pContext.x0.toInt32()];
-                //prev = {t:1, b:pContext.x1, s:pContext.x2.toInt32() };
-                break;
-            /*case 'pread64':
-                s = "pread64 ("+pContext.dxcFD[pContext.x0.toInt32()]+", " +pContext.x1+", "+pContext.x2.toInt32()+", "+pContext.x3.toInt32()+"  ) ";
-                //console.log( ' ['+loc+']   \x1b[35;01m' + inst + ' ('+pContext.x8+')\x1b[0m Syscall='+s+'  [lr='+pContext.lr+']');
-                break;
-            //case 'openat':
-                //u =  pContext.x1.readUtf8String();
-                //s = "openat ("+u+", ...)";
-
-                //pContext.dxcOpts = pContext.x1.readCString();
-
-                /*if(pContext.lr.sub(base)==0x6b40){
-                    if( u == "/system/lib64/p/re.AAAAA.server/AAAAA-agent-64.so" || u == "/system/lib64/libc.so" || u == "/system/bin/linker64") {
-                        pContext.x1.writeUtf8String("/system/lib64/libselinux.so");
-                        s += " \x1b[32;01m !!! Hooked libraries have been hidden !!! \x1b[0m";
-                    }
-                }*/
-               // console.log( ' ['+loc+']   \x1b[35;01m' + inst + ' ('+pContext.x8+')\x1b[0m Syscall='+s+'  [lr='+pContext.lr+']');
-                //console.log( ' ['+RX.mmlookup(pContext.pc)+']   \x1b[35;01m' + inst + ' ('+pContext.x8+')\x1b[0m Syscall='+s+'  [lr='+pContext.lr.sub(begin)+']');
-                //break;
-
-            default:
-
-                let p= "";
-                pContext.dxcOpts = [];
-                sys[3].map((vVal,vOff) => {
-                    const rVal = pContext["x"+vOff];
-                    if(typeof vVal === "string"){
-                        p += `${vVal} = ${rVal} , `;
-                    }else{
-                        p += `${vVal.n} = `;
-
-                        switch(vVal.l){
-                            case L.FD:
-                                p += `${rVal}  ${pContext.dxcFD[rVal.toInt32()+""]}  `;
-                                break;
-                            case L.FLAG:
-                                p += `${(vVal.f)(rVal)}  `;
-                                pContext.dxcOpts[vOff] = rVal;
-                                break;
-                            default:
-                                switch(vVal.t){
-                                    case T.STRING:
-                                    case T.CHAR_BUFFER:
-                                        p += pContext.dxcOpts[vOff] = rVal.readUtf8String();
-                                        break;
-                                    case T.UINT32:
-                                    default:
-                                        p += pContext.dxcOpts[vOff] = rVal;
-                                        break;
-                                }
-                                break;
-                        }
-                        /*
+                switch(vVal.l){
+                    case L.FD:
+                        p += `${rVal}  ${pContext.dxcFD[rVal.toInt32()+""]}  `;
+                        break;
+                    case L.FLAG:
+                        p += `${(vVal.f)(rVal)}  `;
+                        pContext.dxcOpts[vOff] = rVal;
+                        break;
+                    default:
                         switch(vVal.t){
                             case T.STRING:
                             case T.CHAR_BUFFER:
                                 p += pContext.dxcOpts[vOff] = rVal.readUtf8String();
                                 break;
                             case T.UINT32:
-                                pContext.dxcOpts[vOff] = rVal;
-                                switch(vVal.l){
-                                    case L.FD:
-                                        p += `${rVal}  ${pContext.dxcFD[rVal.toInt32()+""]}  `;
-                                        break;
-                                    default:
-                                        p += rVal;
-                                        break;
-                                }
-                                break;
                             default:
                                 p += pContext.dxcOpts[vOff] = rVal;
                                 break;
-                        }*/
-                        p+= ' , ';
-                    }
-                })
-                s = `${sys[1]} ( ${p} ) `;
-                break;
+                        }
+                        break;
+                }
+                /*
+                switch(vVal.t){
+                    case T.STRING:
+                    case T.CHAR_BUFFER:
+                        p += pContext.dxcOpts[vOff] = rVal.readUtf8String();
+                        break;
+                    case T.UINT32:
+                        pContext.dxcOpts[vOff] = rVal;
+                        switch(vVal.l){
+                            case L.FD:
+                                p += `${rVal}  ${pContext.dxcFD[rVal.toInt32()+""]}  `;
+                                break;
+                            default:
+                                p += rVal;
+                                break;
+                        }
+                        break;
+                    default:
+                        p += pContext.dxcOpts[vOff] = rVal;
+                        break;
+                }*/
+                p+= ' , ';
+            }
+        })
+        s = `${sys[1]} ( ${p} ) `;
 
-        }
+
 
 
         if(this.output.flavor == InterruptorAgent.FLAVOR_DXC){
@@ -577,9 +584,19 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
 
 
     traceSyscallRet( pContext:any, pHookCfg:any = null){
+
+
+        if(this.exclude.svc.indexOf(pContext.x8.toInt32())>-1) return;
+
         let ret = pContext.dxcRET;
         if(ret != null){
             switch (ret.l) {
+                case L.SIZE:
+                    if(this.output.dump_buff)
+                        ret = "(len="+pContext.x0+") "+pContext["x"+ret.r].readCString();
+                    else
+                        ret = pContext.x0;
+                    break;
                 case L.FD:
                     if(pContext.dxcFD==null) pContext.dxcFD = {};
                     pContext.dxcFD[ pContext.x0.toInt32()+""] = pContext.dxcOpts[ret.r];
@@ -593,18 +610,12 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
         }else{
            ret = pContext.x0;
         }
+
         console.log( pContext.log +'   > '+ret);
     }
 
 
     trace( pStalkerInterator:any, pInstruction:any, pExtra:any):number{
-
-        /*Process.enumerateRanges("---").map( x => {
-            if(pInstruction.address.compare(x.base) >= 0 && pInstruction.address.compare(x.base.add(x.size)) == -1 ){
-                console.log(pInstruction.address, x.base, x.size, JSON.stringify(x.file));
-            }
-        });*/
-
 
 
         const self = this;
@@ -619,9 +630,8 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                 const hook = self.svc_hk[context.x8.toInt32()];
                 if(hook == null) return ;
 
-
                 if(hook.onLeave != null){
-                    hook.onLeave(context);
+                    (hook.onLeave)(context);
                 }
             });
 
@@ -642,7 +652,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
 
                 self.traceSyscall(context, hook);
 
-                if(hook != null && hook.onEnter != null) hook.onEnter(context);
+                if(hook != null && hook.onEnter != null) (hook.onEnter)(context);
             });
         }
 
