@@ -7,5 +7,6 @@ export enum L {
     ATTRMODE,
     O_FLAGS,
     VADDR,
-    MPROT
+    MPROT,
+    OUTPUT_BUFFER
 }

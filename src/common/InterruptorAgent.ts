@@ -30,6 +30,7 @@ export class InterruptorAgent {
         tid: true,
         pid: false,
         module: true,
+        dump_buff: true,
         highlight: {
             syscalls: []
         }
@@ -109,7 +110,7 @@ export class InterruptorAgent {
         if(this.moduleFilter != null){
             map = new ModuleMap((m) => {
                 if ((this.moduleFilter)(m)) {
-                    console.warn("[INCLUDE] Module : "+m.name);
+                    //console.warn("[INCLUDE] Module : "+m.name);
                     return true;
                 }
                 Stalker.exclude(m);
@@ -118,7 +119,7 @@ export class InterruptorAgent {
         }else{
             map = new ModuleMap((m) => {
                 if(this.exclude.modules.indexOf(m.name)==-1){
-                    console.warn("[INCLUDE] Module : " + m.name);
+                    //console.warn("[INCLUDE] Module : " + m.name);
                     return true;
                 }
                 Stalker.exclude(m);
@@ -156,11 +157,26 @@ export class InterruptorAgent {
         return 1;
     }
 
+
+    /**
+     * To start tracing when a specifc module is loaded, and an optional condition verified
+     *
+     * Must be overridden by architecture specific interruptors
+     *
+     * @param pModuleRegExp
+     * @param pCondition
+     */
+    startOnLoad( pModuleRegExp:RegExp, pCondition:any = null):any {
+        return new Error("Dynamic loading is not supported");
+    }
+
     /**
      * To start to trace
      *
      */
     start(){
+
+
         // @ts-ignore
         const tid = this.tid > -1 ? this.tid : Process.getCurrentThreadId()
         const self = this;
