@@ -140,7 +140,97 @@ Interruptor.newAgentTracer({
 
 ## 4. Documentation
 
-[TODO]
+### 4.1 Create a new agent
+
+First, you need to get the tracer factory adapted to your OS/Architecture :
+For now only "LinuxArm64()" is available.
+```
+var Interruptor = require('../dist/index.js').default.LinuxArm64();
+```
+
+Next step is to intanciante a tracer with a specific options. 
+Options are not mandatory but can change a lot the behavior and output.
+```
+Interruptor.newAgentTracer( /* opts */);
+```
+
+A full list of options can be found into the next section.
+
+Final step, choose when you want to start to trace :
+* A. When frida script is executed
+```
+var Interruptor = require('../dist/index.js').default.LinuxArm64();
+
+Interruptor.newAgentTracer( /* opts */).start();
+```
+
+* B. The first time a module is opened by the linker
+```
+var Interruptor = require('../dist/index.js').default.LinuxArm64();
+
+Interruptor.newAgentTracer( /* opts */).startOnLoad(/my_lib\.so$/g);
+```
+
+* C. From your hooks
+```
+var Interruptor = require('../dist/index.js').default.LinuxArm64();
+
+Interceptor.attach( /* ... */,{
+    onEnter: function(){
+        Interruptor.newAgentTracer( /* opts */).start();
+    }
+})
+```
+
+### 4.2 Options
+
+All options are optional, except some explicited options
+Below, a complete overview of options  :
+```
+{
+    followFork: TRUE | FALSE ] // TODO
+    followThread: TRUE | FALSE ] // TODO
+    tid: <Thread ID>,
+    pid: <PID>,
+    exclude: {
+        syscalls: [ ... syscall names ... ], // "read", ...
+        modules: [ ... module names ... ], // "linker64" ...
+        svc: [ ... SVC number ...], // 0x1e, ...
+        hvc: [ ... HVC number ...]
+    },
+    // coverage options
+    coverage: {
+        enabled = true,
+        flavor = "dr", // not supported
+        fname = "/data/data/my_app/drcov.dat", // MANDATORY
+        stops = 2000 // MANDATORY
+    },
+    // output options (partially implemented)
+    output: {
+        flavor: "dxc", // "strace" is coming
+        tid: true,
+        pid: false,
+        module: true,
+        dump_buff: true, // dump buffer when ptr+size are known 
+        highlight: {
+            syscalls: []
+        }
+    },
+    // hooks
+    svc: {
+        [syscall_text_name]: {
+            onEnter: function(pContext){
+            
+            },
+            onLeave: function(pContext){
+            
+            },
+        }
+    }
+}
+```
+
+### 4.3 Tracer types
 
 There are mainly two way to hook interrupts depending of yours needs.
 
