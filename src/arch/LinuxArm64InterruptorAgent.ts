@@ -15,6 +15,7 @@ const A = {
     OLD_DFD: {t: T.INT32, n:"old_dfd", l:L.DFD},
     NEW_DFD: {t: T.INT32, n:"new_dfd", l:L.DFD},
     FD: {t:T.UINT32, n:"fd", l:L.FD},
+    LFD: {t:T.ULONG, n:"fd", l:L.FD},
     CONST_PATH: {t:T.STRING, n:"path", l:L.PATH, c:true},
     CONST_NAME: {t:T.STRING, n:"name", c:true},
     OLD_NAME: {t:T.CHAR_BUFFER, n:"old_name", c:true},
@@ -25,13 +26,19 @@ const A = {
     SIGNED_LEN: {t:T.LONG, n:"length", l:L.SIZE},
     XATTR: {t:T.INT32, n:"flags", l:L.FLAG, f:X.XATTR },
     PID: {t:T.INT32, n:"pid", l:L.PID },
+    UID: {t:T.UINT32, n:"user", l:L.UID },
+    GID: {t:T.UINT32, n:"group", l:L.GID },
     SIG: {t:T.INT32, n:"sig", l:L.SIG },
+    TID: {t:T.INT32, n:"thread" },
+    CALLER_TID: {t:T.INT32, n:"caller_tid" },
     PTR: {t:T.POINTER64, n:"value"},
     START_ADDR: {t:T.POINTER64, n:"start_addr", l:L.VADDR, f:X.RANGE},
     ADDR: {t:T.POINTER64, n:"addr", l:L.VADDR, f:X.RANGE},
-    CONST_PTR: {t:T.POINTER64, n:"value", c:true}
+    CONST_PTR: {t:T.POINTER64, n:"value", c:true},
+    MPROT: {t:T.INT32, n:"prot", l:L.FLAG, f:X.MPROT}
 }
 const RET:any = {
+    INFO: {t:T.INT32, e:[E.EAGAIN,E.EINVAL,E.EPERM]},
     STAT: {t:T.INT32, e:[E.EACCES, E.EBADF, E.EFAULT, E.EINVAL, E.ELOOP, E.ENAMETOOLONG, E.ENOENT, E.ENOMEM, E.ENOTDIR, E.EOVERFLOW]},
     LINK: {t:T.INT32, e:[E.EACCES,E.EEXIST, E.EFAULT, E.EIO, E.ELOOP, E.EMLINK, E.ENAMETOOLONG, E.ENOENT, E.ENOMEM, E.ENOSPC,E.ENOTDIR, E.EPERM,E.EROFS,E.EXDEV] },
     OPEN: {t:T.INT32, e:[E.EACCES,E.EEXIST, E.EFAULT, E.ENODEV, E.ENOENT, E.ENOMEM, E.ENOSPC, E.ENOTDIR, E.ENXIO, E.EPERM, E.EROFS, E.ETXTBSY,  E.EFBIG, E.EINTR, E.EISDIR, E.ELOOP, E.ENAMETOOLONG, E.EMFILE,E.ENFILE,E.ENOMEM]},
@@ -94,16 +101,13 @@ const SVC = [
     [47,"fallocate",0x2f,[
         A.FD,"int mode","loff_t offset","loff_t len"]],
     [48,"faccessat",0x30,[A.DFD,{t:T.STRING, n:"filename", c:true},"int mode"]],
-    [49,"chdir",0x31,[
-        {t:T.CHAR_BUFFER, n:"path", l:L.PATH, c:true}]],
-    [50,"fchdir",0x32,[A.FD]],
-    [51,"chroot",0x33,[
-        {t:T.CHAR_BUFFER, n:"path", l:L.PATH, c:true}]],
-    [52,"fchmod",0x34,[A.FD,
-        {t:T.USHORT, n:"mode", l:L.ATTRMODE, f:X.ATTR}]],
+    [49,"chdir",0x31,[{t:T.CHAR_BUFFER, n:"path", l:L.PATH, c:true}]],
+    [50,"fchdir",0x32,[A.FD],{t:T.INT32, e:[E.EACCES,E.EFAULT,E.EIO,E.ELOOP,E.ENAMETOOLONG,E.ENOENT,E.ENOMEM,E.ENOTDIR,E.EPERM,E.EBADF]}],
+    [51,"chroot",0x33,[{t:T.CHAR_BUFFER, n:"path", l:L.PATH, c:true}],{t:T.INT32, e:[E.EACCES,E.EFAULT,E.EIO,E.ELOOP,E.ENAMETOOLONG,E.ENOENT,E.ENOMEM,E.ENOTDIR,E.EPERM]}],
+    [52,"fchmod",0x34,[A.FD,{t:T.USHORT, n:"mode", l:L.ATTRMODE, f:X.ATTR}],{t:T.INT32, e:[E.EACCES,E.EFAULT,E.EIO,E.ELOOP,E.ENAMETOOLONG,E.ENOENT,E.ENOMEM,E.ENOTDIR,E.EPERM,E.EBADF,E.EROFS]}],
     [53,"fchmodat",0x35,[A.DFD,A.CONST_PATH,"umode_t mode"]],
-    [54,"fchownat",0x36,[A.DFD,A.CONST_PATH,"uid_t user","gid_t group","int fla"]],
-    [55,"fchown",0x37,[A.FD,"uid_t user","gid_t group"]],
+    [54,"fchownat",0x36,[A.DFD,A.CONST_PATH,"uid_t user",A.GID,"int fla"]],
+    [55,"fchown",0x37,[A.FD,"uid_t user",A.GID]],
     [56,"openat",0x38,[A.DFD,
         A.CONST_FNAME,"int flags",{t:T.UINT32, n:"mode", l:L.O_FLAGS, f:X.O_MODE}],RET.OPENAT],
     [57,"close",0x39,[A.FD]],
@@ -119,12 +123,12 @@ const SVC = [
         {t:T.UINT32, n:"count", l:L.SIZE}
     ], {t:T.UINT32, r:1, n:"sz", l:L.SIZE}],
     [64,"write",0x40,[A.FD,{t:T.CHAR_BUFFER, n:"buf", c:true},{t:T.UINT32, n:"count", l:L.SIZE}]],
-    [65,"readv",0x41,["unsigned long fd","const struct iovec *vec","unsigned long vlen"]],
-    [66,"writev",0x42,["unsigned long fd","const struct iovec *vec","unsigned long vlen"]],
+    [65,"readv",0x41,[A.LFD,"const struct iovec *vec","unsigned long vlen"]],
+    [66,"writev",0x42,[A.LFD,"const struct iovec *vec","unsigned long vlen"]],
     [67,"pread64",0x43,[A.FD,"char *buf","size_t count","loff_t pos"]],
     [68,"pwrite64",0x44,[A.FD,"const char *buf","size_t count","loff_t pos"]],
-    [69,"preadv",0x45,["unsigned long fd","const struct iovec *vec","unsigned long vlen","unsigned long pos_l","unsigned long pos_"]],
-    [70,"pwritev",0x46,["unsigned long fd","const struct iovec *vec","unsigned long vlen","unsigned long pos_l","unsigned long pos_"]],
+    [69,"preadv",0x45,[A.LFD,"const struct iovec *vec","unsigned long vlen","unsigned long pos_l","unsigned long pos_"]],
+    [70,"pwritev",0x46,[A.LFD,"const struct iovec *vec","unsigned long vlen","unsigned long pos_l","unsigned long pos_"]],
     [71,"sendfile",0x47,[{t:T.UINT32, n:"out_fd", l:L.FD},{t:T.UINT32, n:"in_fd", l:L.FD},"off_t *offset","size_t count"]],
     [72,"pselect6",0x48,["int","fd_set *","fd_set *","fd_set *","struct __kernel_timespec *","void *["]],
     [73,"ppoll",0x49,["struct pollfd *","unsigned int","struct __kernel_timespec *","const sigset_t *","size_"]],
@@ -155,10 +159,10 @@ const SVC = [
     [90,"capget",0x5a,["cap_user_header_t header","cap_user_data_t dataptr"]],
     [91,"capset",0x5b,["cap_user_header_t header","const cap_user_data_t data"]],
     [92,"personality",0x5c,["unsigned int personality"]],
-    [93,"exit",0x5d,["int error_code"]],
-    [94,"exit_group",0x5e,["int error_code"]],
-    [95,"waitid",0x5f,["int which",A.PID,"struct siginfo *infop","int options","struct rusage *r"]],
-    [96,"set_tid_address",0x60,["int *tidptr"]],
+    [93,"exit",0x5d,[{ t:T.INT32, n:"status" }]],
+    [94,"exit_group",0x5e,[{ t:T.INT32, n:"status" }]],
+    [95,"waitid",0x5f,[{ t:T.INT32, n:"type_id", l:L.FLAG, f:X.TYPEID},{t:T.UINT32, n:"id"},"struct siginfo *infop","int options","struct rusage *r"]],
+    [96,"set_tid_address",0x60,[{t:T.POINTER32, n:"*tidptr"}],A.CALLER_TID],
     [97,"unshare",0x61,["unsigned long unshare_flags"]],
     [98,"futex",0x62,["u32 *uaddr","int op","u32 val","struct __kernel_timespec *utime","u32 *uaddr2","u32 val3["]],
     [99,"set_robust_list",0x63,["struct robust_list_head *head","size_t len"]],
@@ -179,7 +183,7 @@ const SVC = [
     [114,"clock_getres",0x72,["clockid_t which_clock","struct __kernel_timespec *tp"]],
     [115,"clock_nanosleep",0x73,["clockid_t which_clock","int flags","const struct __kernel_timespec *rqtp","struct __kernel_timespec *rmtp"]],
     [116,"syslog",0x74,["int type","char *buf","int len"]],
-    [117,"ptrace",0x75,["long request",{t:T.LONG, n:"pid", l:L.PID },"unsigned long addr","unsigned long data"]],
+    [117,"ptrace",0x75,[{t:T.LONG, n:"request", l:L.FLAG, f:X.PTRACE },{t:T.LONG, n:"pid", l:L.PID },A.ADDR,"unsigned long data"]],
     [118,"sched_setparam",0x76,[A.PID,"struct sched_param *param"]],
     [119,"sched_setscheduler",0x77,[A.PID,"int policy","struct sched_param *param"]],
     [120,"sched_getscheduler",0x78,[A.PID]],
@@ -193,7 +197,7 @@ const SVC = [
     [128,"restart_syscall",0x80,[]],
     [129,"kill",0x81,[A.PID,A.SIG]],
     [130,"tkill",0x82,[A.PID,A.SIG]],
-    [131,"tgkill",0x83,[{t:T.INT32, n:"tgid", l:L.PID },A.PID,A.SIG]],
+    [131,"tgkill",0x83,[{t:T.INT32, n:"thread_grp", l:L.PID },A.PID,A.SIG]],
     [132,"sigaltstack",0x84,["const struct sigaltstack *uss","struct sigaltstack *uoss"]],
     [133,"rt_sigsuspend",0x85,["sigset_t *unewset","size_t sigsetsize"]],
     [134,"rt_sigaction",0x86,["int","const struct sigaction *","struct sigaction *","size_t"]],
@@ -206,45 +210,40 @@ const SVC = [
     [141,"getpriority",0x8d,["int which","int who"]],
     [142,"reboot",0x8e,["int magic1","int magic2","unsigned int cmd","void *arg"]],
     [143,"setregid",0x8f,["gid_t rgid","gid_t egid"]],
-    [144,"setgid",0x90,["gid_t gid"]],
-    [145,"setreuid",0x91,["uid_t ruid","uid_t euid"]],
-    [146,"setuid",0x92,["uid_t uid"]],
-    [147,"setresuid",0x93,["uid_t ruid","uid_t euid","uid_t suid"]],
-    [148,"getresuid",0x94,["uid_t *ruid","uid_t *euid","uid_t *suid"]],
-    [149,"setresgid",0x95,["gid_t rgid","gid_t egid","gid_t sgid"]],
-    [150,"getresgid",0x96,["gid_t *rgid","gid_t *egid","gid_t *sgid"]],
-    [151,"setfsuid",0x97,["uid_t uid"]],
-    [152,"setfsgid",0x98,["gid_t gid"]],
+    [144,"setgid",0x90,[A.GID],RET.INFO],
+    [145,"setreuid",0x91,[{t:T.UINT32, n:"real_user", l:L.UID},{t:T.UINT32, n:"effective_user", l:L.UID}],RET.INFO],
+    [146,"setuid",0x92,[A.UID],RET.INFO],
+    [147,"setresuid",0x93,[{t:T.UINT32, n:"real_user", l:L.UID},{t:T.UINT32, n:"effective_user", l:L.UID},{t:T.UINT32, n:"suid", l:L.UID}],RET.INFO],
+    [148,"getresuid",0x94,[{t:T.POINTER64, n:"real_user", l:L.UID},{t:T.POINTER64, n:"effective_user", l:L.UID},{t:T.POINTER64, n:"suid", l:L.UID}]],
+    [149,"setresgid",0x95,[{t:T.UINT32, n:"real_grp", l:L.GID},{t:T.UINT32, n:"effective_grp", l:L.GID},{t:T.UINT32, n:"sgid", l:L.GID}],RET.INFO],
+    [150,"getresgid",0x96,[{t:T.POINTER64, n:"real_grp", l:L.UID},{t:T.POINTER64, n:"effective_grp", l:L.UID},{t:T.POINTER64, n:"sgid", l:L.UID}],RET.INFO],
+    [151,"setfsuid",0x97,[A.UID],RET.INFO],
+    [152,"setfsgid",0x98,[A.GID],RET.INFO],
     [153,"times",0x99,["struct tms *tbuf"]],
-    [154,"setpgid",0x9a,[A.PID,{t:T.INT32, n:"pgid", l:L.PID }]],
+    [154,"setpgid",0x9a,[A.PID,{t:T.INT32, n:"pgid", l:L.PID }],RET.INFO],
     [155,"getpgid",0x9b,[A.PID]],
     [156,"getsid",0x9c,[A.PID]],
-    [157,"setsid",0x9d,["-"]],
-    [158,"getgroups",0x9e,["int gidsetsize","gid_t *grouplist"]],
-    [159,"setgroups",0x9f,["int gidsetsize","gid_t *grouplist"]],
-    [160,"uname",0xa0,["struct old_utsname *"]],
-    [161,"sethostname",0xa1,[
-        {t:T.CHAR_BUFFER, n:"name"},
-        {t:T.UINT32, n:"length"}]],
-    [162,"setdomainname",0xa2,[
-        {t:T.CHAR_BUFFER, n:"name"},
-        {t:T.UINT32, n:"length"}]],
+    [157,"setsid",0x9d,[],,RET.INFO],
+    [158,"getgroups",0x9e,[A.SIZE,{t:T.POINTER64, n:"grouplist", l:L.GID}]],
+    [159,"setgroups",0x9f,[A.SIZE,{t:T.POINTER64, n:"grouplist", l:L.GID}],RET.INFO],
+    [160,"uname",0xa0,[{t:T.POINTER64, n:" *utsname" }]],
+    [161,"sethostname",0xa1,[{t:T.CHAR_BUFFER, n:"name"},{t:T.UINT32, n:"length"}]],
+    [162,"setdomainname",0xa2,[{t:T.CHAR_BUFFER, n:"name"},{t:T.UINT32, n:"length"}]],
     [163,"getrlimit",0xa3,["unsigned int resource","struct rlimit *rlim"]],
     [164,"setrlimit",0xa4,["unsigned int resource","struct rlimit *rlim"]],
     [165,"getrusage",0xa5,["int who","struct rusage *ru"]],
-    [166,"umask",0xa6,[
-        {t:T.UINT32, n:"mask", l:L.ATTRMODE, f:X.ATTR}]],
-    [167,"prctl",0xa7,["int option","unsigned long arg2","unsigned long arg3","unsigned long arg4","unsigned long arg5"]],
+    [166,"umask",0xa6,[{t:T.UINT32, n:"mask", l:L.ATTRMODE, f:X.ATTR}]],
+    [167,"prctl",0xa7,[{t:T.INT32, n:"opt", l:L.FLAG, f:X.PRCTL_OPT},"unsigned long arg2","unsigned long arg3","unsigned long arg4","unsigned long arg5"]],
     [168,"getcpu",0xa8,["unsigned *cpu","unsigned *node","struct getcpu_cache *cache"]],
     [169,"gettimeofday",0xa9,["struct timeval *tv","struct timezone *tz"]],
     [170,"settimeofday",0xaa,["struct timeval *tv","struct timezone *tz"]],
     [171,"adjtimex",0xab,["struct __kernel_timex *txc_p"]],
     [172,"getpid",0xac,[],A.PID],
     [173,"getppid",0xad,[],A.PID],
-    [174,"getuid",0xae,[]],
-    [175,"geteuid",0xaf,[]],
-    [176,"getgid",0xb0,[]],
-    [177,"getegid",0xb1,[]],
+    [174,"getuid",0xae,[],A.UID],
+    [175,"geteuid",0xaf,[],A.UID],
+    [176,"getgid",0xb0,[],A.GID],
+    [177,"getegid",0xb1,[],A.GID],
     [178,"gettid",0xb2,[]],
     [179,"sysinfo",0xb3,["struct sysinfo *info"]],
     [180,"mq_open",0xb4,[
@@ -297,12 +296,12 @@ const SVC = [
     [220,"clone",0xdc,["unsigned long","unsigned long","int *","int *","unsigned long"]],
     [221,"execve",0xdd,[
         {t:T.STRING, n:"filename", c:true},"const char *const *argv","const char *const *envp"]],
-    [222,"mmap",0xde,[A.START_ADDR,A.SIZE, {t:T.INT32, n:"prot", l:L.FLAG, f:X.MPROT}, {t:T.INT32, n:"flags", l:L.FLAG, f:X.MAP},
+    [222,"mmap",0xde,[A.START_ADDR,A.SIZE, A.MPROT, {t:T.INT32, n:"flags", l:L.FLAG, f:X.MAP},
         {t:T.UINT32, n:"fd", l:L.MFD}, {t:T.UINT32, n:"offset", l:L.SIZE}],{t:T.INT32, e:[ E.EACCES, E.EAGAIN, E.EBADF, E.EINVAL, E.ENFILE, E.ENODEV, E.ENOMEM, E.ETXTBSY]}],
     [223,"fadvise64",0xdf,[{t:T.UINT32, n:"fd", l:L.FD},"loff_t offset",A.SIZE,"int advice"]],
     [224,"swapon",0xe0,["const char *specialfile","int swap_flags"]],
     [225,"swapoff",0xe1,["const char *specialfile"]],
-    [226,"mprotect",0xe2,[A.ADDR,A.SIZE, {t:T.ULONG, n:"prot", l:L.FLAG, f:X.MPROT}],{t:T.INT32, e:[E.EACCES,E.EFAULT,E.EINVAL,E.ENOMEM]}],
+    [226,"mprotect",0xe2,[A.ADDR,A.SIZE, A.MPROT],{t:T.INT32, e:[E.EACCES,E.EFAULT,E.EINVAL,E.ENOMEM]}],
     [227,"msync",0xe3,[A.ADDR,A.SIZE,{t:T.ULONG, n:"flags", l:L.FLAG, f:X.MS}],{t:T.INT32, e:[E.EBUSY,E.EINVAL,E.ENOMEM]}],
     [228,"mlock",0xe4,[A.ADDR,A.SIZE],{t:T.INT32, e:[E.EPERM,E.EINVAL,E.ENOMEM]}],
     [229,"munlock",0xe5,[A.ADDR,A.SIZE],{t:T.INT32, e:[E.EPERM,E.EINVAL,E.ENOMEM]}],
@@ -311,7 +310,7 @@ const SVC = [
     [232,"mincore",0xe8,[A.ADDR,A.SIZE,"unsigned char * vec"]],
     [233,"madvise",0xe9,[A.ADDR,A.SIG, {t:T.INT32, n:"behavior", l:L.FLAG, f:X.MADV}],{ t:T.INT32, e:[E.EAGAIN,E.EBADF,E.EINVAL,E.EIO, E.ENOMEM]}],
     [234,"remap_file_pages",0xea,["unsigned long start","unsigned long size","unsigned long prot","unsigned long pgoff","unsigned long flags"]],
-    [235,"mbind",0xeb,["unsigned long start","unsigned long len","unsigned long mode","const unsigned long *nmask","unsigned long maxnode","unsigned flags"]],
+    [235,"mbind",0xeb,[A.ADDR,A.LEN,"unsigned long mode","const unsigned long *nmask","unsigned long maxnode","unsigned flags"]],
     [236,"get_mempolicy",0xec,["int *policy","unsigned long *nmask","unsigned long maxnode","unsigned long addr","unsigned long flags"]],
     [237,"set_mempolicy",0xed,["int mode","const unsigned long *nmask","unsigned long maxnode"]],
     [238,"migrate_pages",0xee,[{t:T.INT32, n:"pid", l:L.PID },"unsigned long maxnode","const unsigned long *from","const unsigned long *to"]],
@@ -368,9 +367,9 @@ const SVC = [
     [284,"mlock2",0x11c,["unsigned long start",A.SIZE,"int flags"]],
     [285,"copy_file_range",0x11d,[
         {t:T.UINT32, n:"fd_in", l:L.FD},"loff_t *off_in",{t:T.UINT32, n:"fd_out", l:L.FD},"loff_t *off_out",A.SIZE,"unsigned int flags"]],
-    [286,"preadv2",0x11e,["unsigned long fd","const struct iovec *vec","unsigned long vlen","unsigned long pos_l","unsigned long pos_h","rwf_t flags"]],
-    [287,"pwritev2",0x11f,["unsigned long fd","const struct iovec *vec","unsigned long vlen","unsigned long pos_l","unsigned long pos_h","rwf_t flags"]],
-    [288,"pkey_mprotect",0x120,["unsigned long start",A.SIZE,"unsigned long prot","int pkey"]],
+    [286,"preadv2",0x11e,[A.LFD,"const struct iovec *vec","unsigned long vlen","unsigned long pos_l","unsigned long pos_h","rwf_t flags"]],
+    [287,"pwritev2",0x11f,[A.LFD,"const struct iovec *vec","unsigned long vlen","unsigned long pos_l","unsigned long pos_h","rwf_t flags"]],
+    [288,"pkey_mprotect",0x120,[A.ADDR,A.SIZE,"unsigned long prot","int pkey"]],
     [289,"pkey_alloc",0x121,["unsigned long flags","unsigned long init_val"]],
     [290,"pkey_free",0x122,["int pkey"]],
     [291,"statx",0x123,[A.DFD, A.CONST_PATH,"unsigned flags","unsigned mask","struct statx *buffer"]]
@@ -545,9 +544,10 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
 
                 switch(vVal.l){
                     case L.DFD:
-                        if(rVal>=0)
-                            p += `${rVal}  `;
-                        else if(rVal == AT_.AT_FDCWD)
+                        t = rVal.toInt32();
+                        if(t>=0)
+                            p += `${t}  `;
+                        else if(t == AT_.AT_FDCWD)
                             p += "AT_FDCWD "
                         else
                             p += rVal+" ERR?";
@@ -566,9 +566,10 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                             p += t+" ";
                         return;
                     case L.FD:
-                        if(rVal>=0)
-                            p += `${rVal}  ${pContext.dxcFD[rVal.toInt32()+""]}  `;
-                        else if(rVal == AT_.AT_FDCWD)
+                        t = rVal.toInt32();
+                        if(t>=0)
+                            p += `${t}  ${pContext.dxcFD[t+""]}  `;
+                        else if(t == AT_.AT_FDCWD)
                             p += "AT_FDCWD "
                         else
                             p += rVal+" ";
@@ -585,6 +586,8 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                     default:
                         switch(vVal.t){
                             case T.STRING:
+                                p += pContext.dxcOpts[vOff] = rVal.readCString();
+                                break;
                             case T.CHAR_BUFFER:
                                 p += pContext.dxcOpts[vOff] = rVal.readCString();
                                 break;
