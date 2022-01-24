@@ -1,6 +1,11 @@
 
 
-
+export const K = {
+    P_ALL: [0],
+    P_PID: [1],
+    P_PGID: [2],
+    P_PIDFD: [3]
+}
 export const O_ = {
     O_ACCMODE: 0o00000003,
     O_RDONLY: 0o0000000,
@@ -22,6 +27,32 @@ export const O_ = {
     O_CLOEXEC: 0o2000000,
     O_PATH:    0o10000000,
     O_TMPFILE: 0o20040000
+};
+
+export const PTRACE_ = {
+    PTRACE_TRACEME: [0],
+    PTRACE_PEEKTEXT: [1],
+    PTRACE_PEEKDATA: [2],
+    PTRACE_PEEKUSR: [3],
+    PTRACE_POKETEXT: [4],
+    PTRACE_POKEDATA: [5],
+    PTRACE_POKEUSR: [6],
+    PTRACE_CONT: [7],
+    PTRACE_KILL: [8],
+    PTRACE_SINGLESTEP: [9],
+    PTRACE_ATTACH: [16],
+    PTRACE_DETACH: [17],
+    PTRACE_SYSCALL: [24],
+    PTRACE_SETOPTIONS: [0x4200],
+    PTRACE_GETEVENTMSG: [0x4201],
+    PTRACE_GETSIGINFO: [0x4202],
+    PTRACE_SETSIGINFO: [0x4203],
+    PTRACE_GETREGSET: [0x4204],
+    PTRACE_SETREGSET: [0x4205],
+    PTRACE_SEIZE: [0x4206],
+    PTRACE_INTERRUPT: [0x4207],
+    PTRACE_LISTEN: [0x4208],
+    PTRACE_PEEKSIGINFO: [0x4209]
 };
 
 export const MADV_ = {
@@ -47,6 +78,182 @@ export const MADV_ = {
     MADV_COLD: [20],
     MADV_PAGEOUT: [21]
 };
+export const PR_ = {
+    OPT: {
+        PR_CAP_AMBIENT: [47],
+        PR_CAPBSET_READ: [23],
+        PR_CAPBSET_DROP: [24],
+        PR_SET_CHILD_SUBREAPER: [36],
+        PR_GET_CHILD_SUBREAPER: [37],
+        PR_SET_PDEATHSIG: [1],
+        PR_GET_PDEATHSIG: [2],
+        PR_GET_DUMPABLE: [3],
+        PR_SET_DUMPABLE: [4],
+        PR_GET_UNALIGN: [5],
+        PR_SET_UNALIGN: [6],
+        PR_GET_KEEPCAPS: [7],
+        PR_SET_KEEPCAPS: [8],
+        PR_GET_FPEMU: [9],
+        PR_SET_FPEMU: [10],
+        PR_GET_FPEXC: [11],
+        PR_SET_FPEXC: [12],
+        PR_GET_TIMING: [13],
+        PR_SET_TIMING: [14],
+        PR_SET_NAME: [15],
+        PR_GET_NAME: [16],
+        PR_GET_ENDIAN: [19],
+        PR_SET_ENDIAN: [20],
+        PR_GET_SECCOMP: [21],
+        PR_SET_SECCOMP: [22],
+        PR_GET_TSC: [25],
+        PR_SET_TSC: [26],
+        PR_GET_SECUREBITS: [27],
+        PR_SET_SECUREBITS: [28],
+        PR_SET_TIMERSLACK: [29],
+        PR_GET_TIMERSLACK: [30],
+        PR_SET_PTRACER: [0x59616d61],
+        PR_SET_PTRACER_ANY: [(0xffffffffffffffff - 1)],
+        PR_SET_NO_NEW_PRIVS: [38],
+        PR_GET_NO_NEW_PRIVS: [39],
+        PR_GET_TID_ADDRESS: [40],
+        PR_SET_THP_DISABLE: [41],
+        PR_GET_THP_DISABLE: [42],
+        PR_SET_IO_FLUSHER: [57],
+        PR_GET_IO_FLUSHER: [58],
+        PR_SET_SYSCALL_USER_DISPATCH: [59],
+        PR_SET_VMA: [0x53564d41],
+        PR_SET_VMA_ANON_NAME: [0],
+        PR_SET_TAGGED_ADDR_CTRL: [55],
+        PR_GET_TAGGED_ADDR_CTRL: [56],
+        PR_SET_MM: [35],
+        PR_SET_FP_MODE: [45],
+        PR_GET_FP_MODE: [46],
+        PR_GET_SPECULATION_CTRL: [52],
+        PR_SET_SPECULATION_CTRL: [53],
+    },
+    CAP: {
+        PR_CAP_AMBIENT_IS_SET: [1],
+        PR_CAP_AMBIENT_RAISE: [2],
+        PR_CAP_AMBIENT_LOWER: [3],
+        PR_CAP_AMBIENT_CLEAR_ALL: [4],
+    },
+    UNALIGN: {
+        PR_UNALIGN_NOPRINT: [1],
+        PR_UNALIGN_SIGBUS: [2],
+    },
+    FPEMU: {
+        PR_FPEMU_NOPRINT: [1],
+        PR_FPEMU_SIGFPE: [2],
+    },
+    FP: {
+        PR_FP_EXC_SW_ENABLE: [0x80],
+        PR_FP_EXC_DIV: [0x010000],
+        PR_FP_EXC_OVF: [0x020000],
+        PR_FP_EXC_UND: [0x040000],
+        PR_FP_EXC_RES: [0x080000],
+        PR_FP_EXC_INV: [0x100000],
+        PR_FP_EXC_DISABLED: [0],
+        PR_FP_EXC_NONRECOV: [1],
+        PR_FP_EXC_ASYNC: [2],
+        PR_FP_EXC_PRECISE: [3],
+        PR_FP_MODE_FR: [(1 << 0)],
+        PR_FP_MODE_FRE: [(1 << 1)],
+    },
+    TIMING: {
+        PR_TIMING_STATISTICAL: [0],
+        PR_TIMING_TIMESTAMP: [1],
+    },
+    ENDIAN: {
+        PR_ENDIAN_BIG: [0],
+        PR_ENDIAN_LITTLE: [1],
+        PR_ENDIAN_PPC_LITTLE: [2],
+    },
+    TSC: {
+        PR_TSC_ENABLE: [1],
+        PR_TSC_SIGSEGV: [2],
+    },
+    TASK: {
+        PR_TASK_PERF_EVENTS_DISABLE: [31],
+        PR_TASK_PERF_EVENTS_ENABLE: [32],
+    },
+    MCE: {
+        PR_MCE_KILL: [33],
+        PR_MCE_KILL_CLEAR: [0],
+        PR_MCE_KILL_SET: [1],
+        PR_MCE_KILL_LATE: [0],
+        PR_MCE_KILL_EARLY: [1],
+        PR_MCE_KILL_DEFAULT: [2],
+        PR_MCE_KILL_GET: [34],
+    },
+    MM: {
+        PR_SET_MM_START_CODE: [1],
+        PR_SET_MM_END_CODE: [2],
+        PR_SET_MM_START_DATA: [3],
+        PR_SET_MM_END_DATA: [4],
+        PR_SET_MM_START_STACK: [5],
+        PR_SET_MM_START_BRK: [6],
+        PR_SET_MM_BRK: [7],
+        PR_SET_MM_ARG_START: [8],
+        PR_SET_MM_ARG_END: [9],
+        PR_SET_MM_ENV_START: [10],
+        PR_SET_MM_ENV_END: [11],
+        PR_SET_MM_AUXV: [12],
+        PR_SET_MM_EXE_FILE: [13],
+        PR_SET_MM_MAP: [14],
+        PR_SET_MM_MAP_SIZE: [15]
+    },
+    MPX: {
+        PR_MPX_ENABLE_MANAGEMENT: [43],
+        PR_MPX_DISABLE_MANAGEMENT: [44],
+    },
+    SVE: {
+        PR_SVE_SET_VL: [50],
+        PR_SVE_SET_VL_ONEXEC: [(1 << 18)],
+        PR_SVE_GET_VL: [51],
+        PR_SVE_VL_LEN_MASK: [0xffff],
+        PR_SVE_VL_INHERIT: [(1 << 17)],
+    },
+    SPEC: {
+        PR_SPEC_STORE_BYPASS: [0],
+        PR_SPEC_INDIRECT_BRANCH: [1],
+        PR_SPEC_NOT_AFFECTED: [0],
+        PR_SPEC_PRCTL: [(1 << 0)],
+        PR_SPEC_ENABLE: [(1 << 1)],
+        PR_SPEC_DISABLE: [(1 << 2)],
+        PR_SPEC_FORCE_DISABLE: [(1 << 3)],
+        PR_SPEC_DISABLE_NOEXEC: [(1 << 4)],
+    },
+    PAC: {
+        PR_PAC_RESET_KEYS: [54],
+        PR_PAC_APIAKEY: [(1 << 0)],
+        PR_PAC_APIBKEY: [(1 << 1)],
+        PR_PAC_APDAKEY: [(1 << 2)],
+        PR_PAC_APDBKEY: [(1 << 3)],
+        PR_PAC_APGAKEY: [(1 << 4)],
+    },
+    TAGGED: {
+        PR_TAGGED_ADDR_ENABLE: [(1 << 0)],
+    },
+    MTE: {
+        PR_MTE_TCF_SHIFT: [1],
+        PR_MTE_TAG_SHIFT: [3],
+        PR_MTE_TCF_NONE: [(0 << 1)],
+        PR_MTE_TCF_SYNC: [(1 << 1)],
+        PR_MTE_TCF_ASYNC: [(2 << 1)],
+        PR_MTE_TCF_MASK: [(3 << 1)],
+        PR_MTE_TAG_MASK: [(0xffff << 3)],
+    },
+    SYS: {
+        PR_SYS_DISPATCH_OFF: [0],
+        PR_SYS_DISPATCH_ON: [1],
+    },
+    SYSCALL: {
+        SYSCALL_DISPATCH_FILTER_ALLOW: [0],
+        SYSCALL_DISPATCH_FILTER_BLOCK: [1]
+    }
+};
+
+
 export const MS_ = {
     MS_ASYNC: 1,
     MS_INVALIDATE: 2,
@@ -82,6 +289,10 @@ export const PROT_ = {
     PROT_READ: 1,
     PROT_WRITE: 2,
     PROT_EXEC: 4,
+    PROT_SEM: 8, // arch sensitive
+    // PROT_SAO: 0x10,  // not implemented on ARM ?
+    PROT_GROWSDOWN: 0x01000000,
+    PROT_GROWSUP: 0x02000000
 };
 export const MFD = {
     MFD_CLOEXEC: 1,
@@ -320,6 +531,11 @@ export const E = {
 
 for(const k in E) E[k].push(k);
 
+function l( val, list){
+    for(const k in list) if(val == list[k][0]) return k;
+    return null;
+}
+
 export const X = {
     RANGE: function(p){
         try{
@@ -335,31 +551,35 @@ export const X = {
         else
             return  0; // no flag
     },
+    PRCTL_OPT: function(f){
+        return l(f,PR_.OPT);
+    },
+    PTRACE: function(f){
+        return l(f,PTRACE_);
+    },
+    TYPEID: function(f){
+        return l(f,K);
+    },
     XATTR: function(f){
         return ["default","XATTR_CREATE","XATTR_REPLACE"][f];
     },
     FNCTL: function(f){
-        for(const k in F_) if(f == F_[k][0]) return k;
-        return null;
+        return l(f,F_);
     },
     SIG: function(f){
-        for(const k in S) if(f == S[k][0]) return k;
-        return null;
+        return l(f,S);
     },
     MADV: function(f){
-        for(const k in MADV_) if(f == MADV_[k][0]) return k;
-        return null;
+        return l(f,MADV_);
     },
     MCL: function(f){
-        for(const k in MCL_) if(f == MCL_[k][0]) return k;
-        return null;
+        return l(f,MCL_);
     },
     MAP: function(f){
         return stringifyBitmap(f,MAP_);
     },
     MS: function(f){
-        for(const k in MS_) if(f == MS_[k][0]) return k;
-        return null;
+        return l(f,MS_);
     },
     ERR: function(f){
         for(const k in E) if(f == E[k][0]) return k+" /* "+E[k][1]+" */";
