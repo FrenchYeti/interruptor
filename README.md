@@ -6,6 +6,11 @@ The home for Interruptor, a human-friendly interrupts hook library based on Frid
 
 Interruptor is the interrupts/systemcall hooking system from Dexcalibur.
 
+Quick start for Android app (could not work as is with obfuscated app) :
+```
+frida --codeshare FrenchYeti/android-arm64-strace -U -f YOUR_BINARY
+```
+
 If you like it, please consider to buy  :moneybag: [Dexcalibur Pro](https://www.reversense.com/dexcalibur) or :sparkling_heart: [sponsor me](https://github.com/sponsors/frenchyeti). Sponsor encourage me to free parts of Dexcalibur Pro and spend more free time on such projects :)
 
 The purpose of this library is to provide to Frida users, a rich API able to produce **strace-like** trace + hook + configurable syscall args API.
@@ -17,6 +22,8 @@ It provides by default some useful features such as :
 * Better api to trace/change syscall args before/after
 * Filterable modules and syscalls
 * Coverage generation
+
+
 
 
 
