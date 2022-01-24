@@ -224,7 +224,7 @@ Below, a complete overview of options  :
             },
             onLeave: function(pContext){
             
-            },
+            }
         }
     }
 }
