@@ -15,5 +15,8 @@ export enum L {
     SIG,
     XATTR_LIST,
     F_,
-    MFD // mapped fd
+    MFD, // mapped fd
+    UID,
+    GID,
+    UTSNAME
 }
