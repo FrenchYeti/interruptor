@@ -1,5 +1,3 @@
-//import {Stalker} from "frida"
-import {InterruptorGenericException} from "./InterruptorException";
 import {CoverageAgent} from "../utilities/Coverage";
 
 let CTR = 0;
@@ -14,16 +12,38 @@ export class InterruptorAgent {
     ranges: any = new Map();
     modules: any[] = [];
 
+    /**
+     * PID of process to stalk, when followFork is enabled or on attach
+     * @type number
+     * @field
+     * @public
+     */
     pid: number = -1;
+
     tid: number = -1;
+
     followFork:boolean = false;
+
     followThread:boolean = false;
+
     coverage:CoverageAgent = null;
+
     exclude: any = {
         modules: [],
         syscalls: []
     };
+
     moduleFilter: any = null;
+
+    /**
+     * To use with startOnLoad()
+     * A callback function executed when the modules specified in "startOnLoad" are loaded
+     * @type Function
+     * @field
+     * @public
+     */
+    onStart:any = ()=>{};
+
 
     output:any = {
         flavor: "dxc",
@@ -46,13 +66,9 @@ export class InterruptorAgent {
         for(let k in pConfig){
             switch(k){
                 case 'pid':
-                    if(typeof pConfig.pid !== "number")
-                        throw InterruptorGenericException.INVALID_PID();
                     this.pid = pConfig.pid;
                     break;
                 case 'tid':
-                    if(typeof pConfig.tid !== "number")
-                        throw InterruptorGenericException.INVALID_TID();
                     this.tid = pConfig.tid;
                     break;
                 case 'coverage':
@@ -76,6 +92,9 @@ export class InterruptorAgent {
                     break;
                 case 'moduleFilter':
                     this.moduleFilter = pConfig.moduleFilter;
+                    break;
+                case 'onStart':
+                    this.onStart = pConfig.onStart;
                     break;
             }
         }

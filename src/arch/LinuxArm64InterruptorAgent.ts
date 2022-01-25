@@ -2,13 +2,18 @@ import {InterruptorAgent} from "../common/InterruptorAgent";
 import {InterruptorGenericException} from "../common/InterruptorException";
 import {T} from "../common/DataTypes";
 import {L} from "../common/DataLabels";
-import {AT_, E, MAP_, X} from "./LinuxArm64Flags";
+import * as DEF from "./LinuxArm64Flags";
 const SVC_NUM = 0;
 const SVC_NAME = 1;
 const SVC_ARG = 3;
 const SVC_RET = 4;
 const SVC_ERR = 5;
 
+//{AT_, E, MAP_, X}
+const AT_ = DEF.AT_;
+const E = DEF.E;
+const MAP_ = DEF.MAP_;
+const X = DEF.X;
 // arguments template
 const A = {
     DFD: {t: T.INT32, n:"dfd", l:L.DFD},
@@ -385,6 +390,8 @@ SVC.map(x => {
 
 export class LinuxArm64InterruptorAgent extends InterruptorAgent{
 
+    static API = DEF;
+
     filter_name: string[] = [];
     filter_num: string[] = [];
     svc_hk: any = {};
@@ -498,7 +505,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
         Interceptor.attach(call_ctor, {
             onEnter:function () {
                 if(match==null) return;
-
+                const tmp = match;
                 if(pCondition!==null){
                     if(!(pCondition)(match, this)){
                         match = null;
@@ -509,7 +516,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                 console.warn("[INTERRUPTOR][STARTING] Module '"+match+"' is loading, tracer will start");
                 match = null;
                 self.start();
-
+                self.onStart( tmp, this);
             }
         });
 
@@ -661,7 +668,6 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                 case L.FD:
                     if(pContext.x0 >= 0){
                         if(pContext.dxcFD==null) pContext.dxcFD = {};
-                        console.log(ret.r, pContext.dxcOpts[ret.r])
                         pContext.dxcFD[ pContext.x0.toInt32()+""] = pContext.dxcOpts[ret.r];
                         ret = "("+(L.DFD==ret.l?"D":"")+"FD) "+pContext.x0;
                     }else if(ret.e){

@@ -131,6 +131,10 @@ export const PR_ = {
         PR_GET_SPECULATION_CTRL: [52],
         PR_SET_SPECULATION_CTRL: [53],
     },
+    DUMPABLE: {
+        SUID_DUMP_DISABLE: 0,
+        SUID_DUMP_USER: 1
+    },
     CAP: {
         PR_CAP_AMBIENT_IS_SET: [1],
         PR_CAP_AMBIENT_RAISE: [2],
