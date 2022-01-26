@@ -280,7 +280,12 @@ export const MAP_ = {
     MAP_LOCKED: [0x2000],
     MAP_NORESERVE: [0x4000],
 };
-
+export const CLOCK = {
+    CLOCK_REALTIME: [0],
+    CLOCK_MONOTONIC: [1],
+    CLOCK_PROCESS_CPUTIME_ID: [2],
+    CLOCK_THREAD_CPUTIME_ID: [3]
+} ;
 
 export const MNT_ = {
     MNT_FORCE: 1,
@@ -557,6 +562,9 @@ export const X = {
     },
     PRCTL_OPT: function(f){
         return l(f,PR_.OPT);
+    },
+    CLK: function(f){
+        return l(f,CLOCK);
     },
     PTRACE: function(f){
         return l(f,PTRACE_);
