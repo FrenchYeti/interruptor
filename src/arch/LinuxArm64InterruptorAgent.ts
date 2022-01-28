@@ -1,7 +1,6 @@
 import {InterruptorAgent} from "../common/InterruptorAgent";
 import {InterruptorGenericException} from "../common/InterruptorException";
-import {T} from "../common/DataTypes";
-import {L} from "../common/DataLabels";
+import {T,L} from "./Types";
 import * as DEF from "./LinuxArm64Flags";
 const SVC_NUM = 0;
 const SVC_NAME = 1;

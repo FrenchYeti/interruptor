@@ -1,4 +1,4 @@
-import {InterruptorAgent} from "./InterruptorAgent";
+
 
 /**
  * Abstract class
