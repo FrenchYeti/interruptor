@@ -52,12 +52,16 @@ Simple tracing without hook from attach moment, with excluded module and syscall
 ```
 var Interruptor = require('../dist/index.js').default.LinuxArm64();
 
-Interruptor.newAgentTracer({
-    exclude: {
-        modules: ["linker64"],
-        syscalls: ["clock_gettime"]
-    }
-}).start();
+// better results, when app is loaded
+Java.perform(()=>{
+    Interruptor.newAgentTracer({
+        exclude: {
+            modules: ["linker64"],
+            syscalls: ["clock_gettime"]
+        }
+    }).start();
+});
+
 
 ```
 
