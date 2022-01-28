@@ -6,6 +6,7 @@
     "declaration": true,
     "outDir": "./dist",
     "removeComments": true,
+    "sourceMap": false,
     "typeRoots": [
       "node_modules/@types"
     ],
