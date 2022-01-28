@@ -1,4 +1,4 @@
-var Interruptor = require('../dist/index.js').default.LinuxArm64();
+var Interruptor = require('./android-arm64-strace.min.js').target.LinuxArm64();
 
 Interruptor
     .newAgentTracer({

@@ -1,4 +1,4 @@
-var Interruptor = require('../dist/index.js').default.LinuxArm64();
+var Interruptor = require('./android-arm64-strace.min.js').target.LinuxArm64();
 
 
 Interruptor.newAgentTracer({
@@ -12,6 +12,6 @@ Interruptor.newAgentTracer({
             count: 2000 // stop after 2000 basic blocks captured
         }
     }
-}).startOnLoad(/<YOUR_LIB>>/g);
+}).startOnLoad(/<YOUR_LIB>/g);
 
 
