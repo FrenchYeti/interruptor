@@ -1,7 +1,7 @@
 const path = require('path');
 
 module.exports = {
-    entry: './dist/index.js',
+    entry: './dist/index.linux.arm64.js',
     // devtool: 'inline-source-map',
     target: 'node',
     mode: 'production',
@@ -9,7 +9,7 @@ module.exports = {
         path: path.resolve(__dirname, 'dist'),
         filename: 'android-arm64-strace.min.js',
         library: {
-            name: 'Interruptor',
+            //name: 'Interruptor',
             type: 'commonjs'
         }
     },

@@ -1,7 +1,8 @@
 /**
- * The aim of this entrypoint is to offers Interruptor factory for each arch/os supported.
+ * The aim of this entrypoint is to offers Interruptor factory for Linux/Arm64
  *
- * It is particularly appropriate when Interruptor package is installed globally (npm install -g)
+ * It is particularly appropriate when Interruptor is used as a single included
+ * file into a specific project
  *
  * @author georges@dexcalibur.org
  */
