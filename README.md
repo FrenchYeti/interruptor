@@ -24,33 +24,70 @@ It provides by default some useful features such as :
 * Coverage generation
 
 
+## 1. How to use
+
+In fact, install is not necessary. Just include the released minified JS file corresponding to your target os/arch into your Frida agent's script. Or call it throuh Frida's Codeshare.
 
 
+### 1.A Using Frida's Codeshare (without configuration)
 
-## 1. Requirements
+Warning : this methods don't allow you to configure Interruptor. So, tracing of obfuscated or multi-threaded application could failed.
+
+This method is only  provided for training purpose.
+```
+frida --codeshare FrenchYeti/android-arm64-strace -f YOUR_BINARY
+```
+
+
+### 1.A From latest release
 
 **Requirements :**
 
 * frida
 * frida-compile
 
-**Install :**
+Donwload [latest release](https://github.com/FrenchYeti/interruptor/releases) for your architecture into your working directory, 
+and do:
+
+```
+var Interruptor = require('./android-arm64-strace.min.js').target.LinuxArm64();
+
+// better results, when app is loaded
+Java.perform(()=>{
+    Interruptor.newAgentTracer({
+        exclude: {
+            modules: ["linker64"],
+            syscalls: ["clock_gettime"]
+        }
+    }).start();
+});
+```
+
+Time to deploy hooks can be configured to be when a particular library is loaded. See options below.
+
+### 1.C From source
+
+**Requirements :**
+
+* frida
+* frida-compile
+* TS compiler
 
 Only from source for now (will move to NPM ASAP)
 ```
 git clone https://github.com/FrenchYeti/interruptor
 cd interruptor
 npm install
-npx tsc
+frida-compile index.ts -t tsconfig.json -o android-arm64-strace.min.js
 frida-compile examples/simple_strace.js -o trace.js && frida -U -f <PACKAGE> -l trace.js
 ```
 
-**Example**
+## 2. Examples
 
-#### Simple tracing
+### 2.A Simple tracing
 Simple tracing without hook from attach moment, with excluded module and syscall (by name)
 ```
-var Interruptor = require('../dist/index.js').default.LinuxArm64();
+var Interruptor = require('./android-arm64-strace.min.js').default.LinuxArm64();
 
 // better results, when app is loaded
 Java.perform(()=>{
@@ -85,7 +122,7 @@ Output :
 
 More complete example are provided into examples directory.
 
-#### Simple tracing with hooked "read" syscall and dynamic loading
+### 2.B Simple tracing with hooked "read" syscall and dynamic loading
 
 ```
 Interruptor.newAgentTracer({
@@ -108,7 +145,7 @@ Interruptor.newAgentTracer({
 ```
 
 
-#### Simple tracing with coverage
+### 2.C Simple tracing with coverage
 
 ```
 Interruptor.newAgentTracer({
@@ -125,7 +162,7 @@ Interruptor.newAgentTracer({
 }).startOnLoad(/<YOUR_LIB>/g);
 ```
 
-## 2. Supports
+## 3. Supports
 
 **Architectures**
 * ARM64 : SVC (syscall), HVC (hypervisor)
@@ -133,7 +170,7 @@ Interruptor.newAgentTracer({
 **APIs**
 * Linux kernel API (syscall)
 
-## 3. Roadmap
+## 4. Roadmap
 
 | Task  | Description  | Status  |
 |---|---|---|
@@ -149,9 +186,9 @@ Interruptor.newAgentTracer({
 | Multi-process (isolated, ...)  | Follow several process in same time.  |   |
 | Incremental drcov | Instead of writing all coverage data one time into output file, update it at runtime to handle case where process crashes |   |
 
-## 4. Documentation
+## 5. Documentation
 
-### 4.1 Create a new agent
+### 5.A Create a new agent
 
 First, you need to get the tracer factory adapted to your OS/Architecture :
 For now only "LinuxArm64()" is available.
@@ -193,7 +230,7 @@ Interceptor.attach( /* ... */,{
 })
 ```
 
-### 4.2 Options
+### 5.B Options
 
 All options are optional, except some explicited options
 Below, a complete overview of options  :
@@ -203,6 +240,7 @@ Below, a complete overview of options  :
     followThread: TRUE | FALSE ] // TODO
     tid: <Thread ID>,
     pid: <PID>,
+    onStart: <callback function>,
     exclude: {
         syscalls: [ ... syscall names ... ], // "read", ...
         modules: [ ... module names ... ], // "linker64" ...
@@ -241,7 +279,7 @@ Below, a complete overview of options  :
 }
 ```
 
-### 4.3 Tracer types
+### 5.C Tracer types
 
 There are mainly two way to hook interrupts depending of yours needs.
 
