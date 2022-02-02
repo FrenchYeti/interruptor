@@ -424,7 +424,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                     for(let s in pConfig.svc) this.onSupervisorCall(s, pConfig.svc[s]);
                     break;
                 case 'hvc':
-                    for(let s in pConfig.hvc) this.onHypervisorCall((s as any).parseInt(16), pConfig.svc[s]);
+                    for(let s in pConfig.hvc) this.onHypervisorCall((s as any).parseInt(16), pConfig.hvc[s]);
                     break;
                 case 'filter_name':
                     this.filter_name = pConfig.filter_name;
@@ -435,10 +435,6 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
             }
         }
 
-        this.exclude.svc = pConfig.exclude.hasOwnProperty("svc") ? pConfig.exclude.svc : [];
-        this.exclude.hvc = pConfig.exclude.hasOwnProperty("hvc") ? pConfig.exclude.hvc : [];
-        this.exclude.smc = pConfig.exclude.hasOwnProperty("smc") ? pConfig.exclude.smc : [];
-        this.prepareExcludedSyscalls(this.exclude.syscalls);
         this.setupBuiltinHook();
     }
 
