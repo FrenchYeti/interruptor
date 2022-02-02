@@ -782,7 +782,6 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
 
                 self.traceSyscall(context, hook);
 
-                if(hook != null && hook.onEnter != null) (hook.onEnter)(context);
             });
         }
 
