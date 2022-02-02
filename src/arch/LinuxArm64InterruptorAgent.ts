@@ -1,4 +1,4 @@
-import {InterruptorAgent} from "../common/InterruptorAgent";
+import {F, InterruptorAgent} from "../common/InterruptorAgent";
 import {InterruptorGenericException} from "../common/InterruptorException";
 import {T,L} from "./Types";
 import * as DEF from "./LinuxArm64Flags";
@@ -388,6 +388,8 @@ SVC.map(x => {
     SVC_MAP_NUM[x[0] as string] = x;
 });
 
+let isExcludedFn:any = null;
+
 export class LinuxArm64InterruptorAgent extends InterruptorAgent{
 
     static API = DEF;
@@ -407,12 +409,15 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
     _setupDelegateFilters( pTypes:string, pOpts:any):void {
         const o = pOpts;
         const f = this[pTypes];
+
         ["svc","hvc","smc"].map( x => {
             if(o.hasOwnProperty(x))
                 f[x] = o[x];
         });
 
-        f.svc = this.getSyscallList(f.syscalls);
+        if(f.hasOwnProperty("syscalls") && f.syscalls != null){
+            f.svc = this.getSyscallList(f.syscalls);
+        }
     }
 
     configure(pConfig:any){
@@ -439,7 +444,17 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
     }
 
     protected _updateScope(pScope:any):void {
-
+        switch ( this._policy.svc){
+            case F.INCLUDE_ANY:
+                isExcludedFn = (x)=>{ return (this._scope.svc.indexOf(x)>-1); };
+                break;
+            case F.EXCLUDE_ANY:
+                isExcludedFn = (x)=>{ return (this._scope.svc.indexOf(x)==-1);};
+                break;
+            case F.FILTER:
+                isExcludedFn = (x)=>{ return (this._scope.svc.i.indexOf(x)==-1 || this._scope.svc.e.indexOf(x)>-1);};
+                break;
+        }
     }
 
     /**
@@ -542,7 +557,6 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
             const p = args[0].readUtf8String();
 
             if(p!=null && pModuleRegExp.exec(p) != null){
-                console.log(p);
                 match = p;
             }
         });
@@ -571,7 +585,6 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
 
     traceSyscall( pContext:any, pHookCfg:any = null){
 
-        if(this.exclude.svc.indexOf(pContext.x8.toInt32())>-1) return;
 
 
         const sys = SVC_MAP_NUM[ pContext.x8.toInt32() ];
@@ -697,7 +710,6 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
     traceSyscallRet( pContext:any, pHookCfg:any = null){
 
 
-        if(this.exclude.svc.indexOf(pContext.x8.toInt32())>-1) return;
 
         let ret = pContext.dxcRET;
         if(ret != null){
@@ -751,10 +763,13 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
         if(pExtra.onLeave == 1){
 
             pStalkerInterator.putCallout(function(context) {
+                const n = context.x8.toInt32();
+
+                if(isExcludedFn(n)) return;
 
                 self.traceSyscallRet(context);
 
-                const hook = self.svc_hk[context.x8.toInt32()];
+                const hook = self.svc_hk[n];
                 if(hook == null) return ;
 
                 if(hook.onLeave != null){
@@ -774,8 +789,12 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
             pExtra.onLeave =  1;
             pStalkerInterator.putCallout(function(context) {
 
+                const n = context.x8.toInt32();
+
+                if(isExcludedFn(n)) return;
+
                 if(context.dxcFD==null) context.dxcFD = {};
-                const hook = self.svc_hk[context.x8.toInt32()];
+                const hook = self.svc_hk[n];
 
 
                 if(hook != null && hook.onEnter != null) (hook.onEnter)(context);
