@@ -404,6 +404,16 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
         this.configure(pConfig);
     }
 
+    _setupDelegateFilters( pTypes:string, pOpts:any):void {
+        const o = pOpts;
+        const f = this[pTypes];
+        ["svc","hvc","smc"].map( x => {
+            if(o.hasOwnProperty(x))
+                f[x] = o[x];
+        });
+
+        f.svc = this.getSyscallList(f.syscalls);
+    }
 
     configure(pConfig:any){
         if(pConfig == null) return;
@@ -432,14 +442,52 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
         this.setupBuiltinHook();
     }
 
+    protected _updateScope(pScope:any):void {
+
+    }
+
     /**
      * To generate the list of excluded syscall num from a list of syscall name
      * @param {string[]} pSyscalls An array of syscall name
      */
-    prepareExcludedSyscalls( pSyscalls:string[] ):void {
-        pSyscalls.map( svcName => {
-            this.exclude.svc.push(SVC_MAP_NAME[svcName][0]);
-        })
+    getSyscallList( pSyscalls:any ):any {
+
+        const list = [];
+
+        switch(typeof pSyscalls){
+            case "string":
+                SVC.map( x => { if(x[1]==pSyscalls) list.push(x[SVC_NUM]); });
+                break;
+            case "function":
+                SVC.map( x => { if(pSyscalls.apply(null, x)) list.push(x[SVC_NUM]); });
+                break;
+            case "object":
+                if(Array.isArray(pSyscalls)){
+                    pSyscalls.map( sVal => {
+                        switch(typeof sVal){
+                            case "string":
+                                SVC.map( x => { if(x[SVC_NAME]==sVal) list.push(x[SVC_NUM]); });
+                                break;
+                            case "number":
+                                SVC.map( x => { if(x[SVC_NUM]==sVal) list.push(x[SVC_NUM]); });
+                                break;
+                            case "object":
+                                SVC.map( x => { if(sVal.exec(x[SVC_NAME])!=null) list.push(x[SVC_NUM]); });
+                                break;
+                        }
+                    })
+                }else if (pSyscalls instanceof RegExp){
+                    SVC.map( x => { if(pSyscalls.exec(x[1])!=null) list.push(x[0]); });
+                }else{
+                    SVC.map(x => { list.push(x[SVC_NUM]); });
+                }
+                break;
+            default:
+                SVC.map(x => { list.push(x[SVC_NUM]); });
+                break;
+        }
+
+        return list;
     }
 
     onSupervisorCall(pIntName:string, pHooks:any){
