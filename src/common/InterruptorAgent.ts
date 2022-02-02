@@ -213,19 +213,6 @@ export class InterruptorAgent {
         this._setupDelegateFilters(pType, pOpts);
     }
 
-    /**
-     * To merge include/exclude config to define the scope
-     * @protected
-     */
-    protected _defineScope():void {
-        const mod = [];
-
-        if(this.include){
-            if(this.include.modules != null){
-
-            }
-        }
-    }
 
     /**
      * To generate a filtered list of syscalls
