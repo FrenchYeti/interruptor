@@ -447,8 +447,9 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
     }
 
     /**
-     * To generate the list of excluded syscall num from a list of syscall name
-     * @param {string[]} pSyscalls An array of syscall name
+     * To generate a filtered list of syscalls
+     * @param {string[]} pSyscalls An array of syscall number
+     * @method
      */
     getSyscallList( pSyscalls:any ):any {
 
