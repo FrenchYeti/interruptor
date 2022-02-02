@@ -777,6 +777,9 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                 if(context.dxcFD==null) context.dxcFD = {};
                 const hook = self.svc_hk[context.x8.toInt32()];
 
+
+                if(hook != null && hook.onEnter != null) (hook.onEnter)(context);
+
                 self.traceSyscall(context, hook);
 
                 if(hook != null && hook.onEnter != null) (hook.onEnter)(context);
