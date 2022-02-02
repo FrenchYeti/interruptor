@@ -2,6 +2,12 @@ import {CoverageAgent} from "../utilities/Coverage";
 
 let CTR = 0;
 
+export enum F {
+    EXCLUDE_ANY,
+    INCLUDE_ANY,
+    FILTER
+}
+
 export class InterruptorAgent {
 
     static FLAVOR_DXC = "dxc";
@@ -28,12 +34,20 @@ export class InterruptorAgent {
 
     coverage:CoverageAgent = null;
 
-    exclude: any = {
-        modules: [],
-        syscalls: []
-    };
+    exclude: any = null;
+
+    include: any = null;
 
     moduleFilter: any = null;
+
+    debug:boolean = false;
+
+    /**
+     * Filter type : include, equal, exclude
+     */
+    _policy:any = {};
+
+    _scope:any = {};
 
     /**
      * To use with startOnLoad()
@@ -56,11 +70,23 @@ export class InterruptorAgent {
         }
     }
 
+    /**
+     *
+     * @param {any} pConfig Options
+     * @constructor
+     */
     constructor( pOptions:any) {
         this.uid = CTR++;
         this.parseOptions(pOptions);
     }
 
+    /**
+     * To parse object containing options
+     *
+     * @param {any} pConfig Options
+     * @method
+     * @public
+     */
     parseOptions(pConfig:any):void {
 
         for(let k in pConfig){
@@ -78,17 +104,14 @@ export class InterruptorAgent {
                     this.followFork = (typeof pConfig.followFork !== "boolean" ? false : pConfig.followFork);
                     break;
                 case 'followThread':
-                    this.followThread = (typeof pConfig.followFork !== "boolean" ? false : pConfig.followFork);
-                    break;
-                case 'exclude':
-                    for(k in pConfig.exclude){
-                        this.exclude[k] = pConfig.exclude[k];
-                    }
+                    this.followThread = (typeof pConfig.followThread !== "boolean" ? false : pConfig.followThread);
                     break;
                 case 'output':
-                    for(k in pConfig.output){
-                        this.output[k] = pConfig.output[k];
-                    }
+                    for(const i in pConfig.output) this[k].output = pConfig[k].output;
+                    break;
+                case 'include':
+                case 'exclude':
+                    this._setupFilters(k, pConfig[k]);
                     break;
                 case 'moduleFilter':
                     this.moduleFilter = pConfig.moduleFilter;
@@ -100,16 +123,224 @@ export class InterruptorAgent {
         }
     }
 
+    /**
+     *
+     * @param pType
+     * @param pOpts
+     * @protected
+     */
+    protected _setupDelegateFilters(pType:string, pOpts:any):void {
+
+    }
+
+
+    /**
+     * The aime of this function is to compute final scope by merging
+     * exclude / include options
+     *
+     * @param pType
+     * @param pOpts
+     * @protected
+     */
+    protected _buildScope():any {
+        this._scope = {
+            modules: null,
+            syscalls: null
+        };
+
+        if(this.include != null){
+            for(let i in this.include){
+                this._policy[i] = F.EXCLUDE_ANY;
+                this._scope[i] = this.include[i];
+            }
+        }else{
+            for(let i in this._scope){
+                this._policy[i] = F.INCLUDE_ANY;
+            }
+        }
+
+        if(this.exclude != null){
+            for(let i in this.exclude){
+                // true only if "include" is defined
+                if(this._scope.hasOwnProperty(i) && this._scope[i] != null){
+                    if(this._policy[i] == F.EXCLUDE_ANY){
+                        this._policy[i] = F.FILTER;
+                        this._scope[i] = { i: this._scope[i], e:this.exclude[i] }
+                    }else{
+                        this._policy[i] = F.INCLUDE_ANY;
+                        this._scope[i] = this.exclude[i];
+                    }
+                    //this._scope[i] = this._scope[i].filter( v => this.exclude[i].indexOf(v)==-1 );
+                }else{
+                    // else, filtering only
+                    this._policy[i] = F.INCLUDE_ANY; // keep only element not in the list
+                    this._scope[i] = this.exclude[i];
+                }
+            }
+        }
+
+        this._updateScope(this._scope, this._policy);
+    }
+
+    protected _updateScope(pScope:any, pPolicy:any):void {
+
+    }
+
+    /**
+     *
+     * @param pType
+     * @param pOpts
+     * @private
+     */
+    private _setupFilters(pType:string, pOpts:any):void {
+
+        if(this[pType]==null) this[pType] = {};
+
+        const filt = this[pType];
+        for(const t in pOpts){
+            for(const ppt in pOpts){
+                switch(ppt){
+                    case "modules":
+                        filt.modules = pOpts.modules;
+                        break;
+                    case "syscalls":
+                        filt.syscalls = pOpts.syscalls;
+                        break;
+                }
+            }
+        }
+
+        this._setupDelegateFilters(pType, pOpts);
+    }
+
+    /**
+     * To merge include/exclude config to define the scope
+     * @protected
+     */
+    protected _defineScope():void {
+        const mod = [];
+
+        if(this.include){
+            if(this.include.modules != null){
+
+            }
+        }
+    }
+
+    /**
+     * To generate a filtered list of syscalls
+     * @param {string[]} pSyscalls An array of syscall number
+     * @method
+     */
+    getModuleList( pFilter:any,  pSrcList:Module[] = null,  pList:any = []):any {
+
+        if(pFilter == null){
+            return false;
+        }
+
+        const mods:Module[] = pSrcList==null ? Process.enumerateModules() : pSrcList;
+        const list = pList;
+        switch(typeof pFilter){
+            case "string":
+                mods.map( x => { if(x.name==pFilter) list.push(x.name); });
+                break;
+            case "function":
+                mods.map( x => { if(pFilter.apply(null, x)) list.push(x.name); });
+                break;
+            case "object":
+                if(Array.isArray(pFilter)){
+                    pFilter.map( sVal => {
+                        list.concat(this.getModuleList(sVal, mods, list));
+                    })
+                }else if(pFilter instanceof RegExp){
+                    mods.map( x => { if(pFilter.exec(x.name)!=null) list.push(x.name); });
+                } // todo : add selection by range start -> end / size
+                break;
+        }
+
+        return list;
+    }
+
+    /**
+     * To compute the list of stalked module from include/exclude options
+     *
+     * @method
+     */
+    private _filterModuleScope():void {
+
+        let list:string[];
+        let map:ModuleMap;
+
+        if(this._scope.hasOwnProperty("modules")){
+
+            list = this.getModuleList(this._scope.modules);
+
+            if(this._policy.modules == F.EXCLUDE_ANY){
+                // authorized modules
+                list = this.getModuleList(this._scope.modules);
+                map = new ModuleMap((m) => {
+                    if(list.indexOf(m.name)==-1){
+                        Stalker.exclude(m);
+                        return false;
+                    }
+                    console.log("Modules (exclude any): "+m.name);
+                    return true;
+                });
+            }
+            else if(this._policy.modules == F.INCLUDE_ANY){
+                // excluded modules
+                list = this.getModuleList(this._scope.modules);
+                map = new ModuleMap((m) => {
+                    if(list.indexOf(m.name)==-1){
+                        Stalker.exclude(m);
+                        return false;
+                    }
+                    console.log("Modules (include any): "+m.name);
+                    return true;
+                });
+            }
+            else{
+                list = this.getModuleList(this._scope.modules.i);
+                const exc = this.getModuleList(this._scope.modules.e);
+
+                // filter authorized list with excluded modules
+                list = list.filter(x => { return exc.indexOf(x)==-1 });
+
+                map = new ModuleMap((m) => {
+                    // check if module is authorized
+                    if(list.indexOf(m.name)==-1){
+                        Stalker.exclude(m);
+                        return false;
+                    }
+                    console.log("Modules (filter): "+m.name);
+                    return true;
+                });
+            }
+        }else{
+            map = new ModuleMap();
+        }
+
+        this.modules = map.values();
+        for (const module of this.modules) {
+            const ranges = module.enumerateRanges("--x");
+            this.ranges.set(module.base, ranges);
+        }
+    }
+
 
     /**
      * To check if coverage is enabled
+     *
+     * @return {boolean} TRUE is coverage is enabled, else FALSE
+     * @methpd
      */
     isTrackCoverage():boolean {
         return  (this.coverage != null && this.coverage.enabled);
     }
 
     /**
-     * to process coverage events
+     * To process coverage events
+     *
      * @param pStalkerEvents
      */
     processBbsCoverage( pStalkerEvents:any){
@@ -119,58 +350,6 @@ export class InterruptorAgent {
     }
 
 
-    /**
-     * To exclude some range from stalker
-     */
-    filterModuleScope(){
-
-
-        let map:ModuleMap;
-        if(this.moduleFilter != null){
-            map = new ModuleMap((m) => {
-                if ((this.moduleFilter)(m)) {
-                    //console.warn("[INCLUDE] Module : "+m.name);
-                    return true;
-                }
-                Stalker.exclude(m);
-                return false;
-            });
-        }else{
-            map = new ModuleMap((m) => {
-                if(this.exclude.modules.indexOf(m.name)==-1){
-                    //console.warn("[INCLUDE] Module : " + m.name);
-                    return true;
-                }
-                Stalker.exclude(m);
-                return false;
-            });
-            /*
-            this.exclude.modules.map( (r:any) => {
-                if(typeof r === "string"){
-                    // @ts-ignore
-                    console.warn("[EXCLUDE] Module : "+r);
-                    let m = Process.findModuleByName(r);
-                    if(m != null){
-                        Stalker.exclude( Process.findModuleByName(r));
-                    }else{
-                        console.error("[EXCLUDE] Error : module '"+r+"' not found. ");
-                    }
-
-                }else if(r.base != null && r.size !== null){
-                    // @ts-ignore
-                    console.warn("[EXCLUDE] Module : "+r.name);
-                    Stalker.exclude( r);
-                }
-            })*/
-        }
-
-
-        this.modules = map.values();
-        for (const module of this.modules) {
-            const ranges = module.enumerateRanges("--x");
-            this.ranges.set(module.base, ranges);
-        }
-    }
 
     trace( pStalkerInterator:any, pInstruction:any, pExtra:any):number {
         return 1;
@@ -196,6 +375,18 @@ export class InterruptorAgent {
     start(){
 
 
+        this._buildScope();
+
+        if(this.debug){
+            if(this._scope.modules.length > 0){
+                console.log(this._scope);
+            }
+            if(this._scope.syscalls.length > 0){
+                console.log(this._scope);
+            }
+        }
+
+
         // @ts-ignore
         const tid = this.tid > -1 ? this.tid : Process.getCurrentThreadId()
         const self = this;
@@ -204,7 +395,7 @@ export class InterruptorAgent {
         console.log("[STARTING TRACE] UID="+this.uid+" Thread "+tid);
 
         // to exclude configured ranges
-        this.filterModuleScope();
+        this._filterModuleScope();
 
 
 
