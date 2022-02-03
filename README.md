@@ -79,7 +79,7 @@ git clone https://github.com/FrenchYeti/interruptor
 cd interruptor
 npm install
 frida-compile index.ts -t tsconfig.json -o android-arm64-strace.min.js
-frida-compile examples/simple_strace.js -o trace.js && frida -U -f <PACKAGE> -l trace.js
+frida-compile examples/android/simple_strace.js -o trace.js && frida -U -f <PACKAGE> -l trace.js
 ```
 
 ## 2. Examples
