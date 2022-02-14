@@ -71,13 +71,16 @@ export class InterruptorAgent {
         }
     }
 
+    _do_ft:any = null;
+
     /**
      *
      * @param {any} pConfig Options
      * @constructor
      */
-    constructor( pOptions:any) {
+    constructor( pOptions:any, pDoFollowThread:any = null) {
         this.uid = CTR++;
+        this._do_ft = pDoFollowThread;
         this.parseOptions(pOptions);
     }
 
@@ -106,6 +109,9 @@ export class InterruptorAgent {
                     break;
                 case 'followThread':
                     this.followThread = (typeof pConfig.followThread !== "boolean" ? false : pConfig.followThread);
+                    if(!this.followThread){
+                        this._do_ft = null;
+                    }
                     break;
                 case 'output':
                     for(const i in pConfig.output) this[k].output = pConfig[k].output;
@@ -436,7 +442,13 @@ export class InterruptorAgent {
         }
 
         // @ts-ignore
-        Stalker.follow(tid, opts)
+        Stalker.follow(tid, opts);
+
+        // prevent interceptor issue
+        if(this._do_ft !== null){
+            this._do_ft(this);
+        }
+
     }
 
 }
