@@ -262,7 +262,7 @@ export class InterruptorAgent {
      */
     private _filterModuleScope():void {
 
-        let list:string[];
+        let modules:string[];
         let map:ModuleMap;
 
         if(this._scope.hasOwnProperty("modules")){
@@ -271,46 +271,53 @@ export class InterruptorAgent {
 
             if(this._policy.modules == F.EXCLUDE_ANY){
                 // authorized modules
-                list = this.getModuleList(this._scope.modules);
+                modules = this.getModuleList(this._scope.modules);
                 map = new ModuleMap((m) => {
-                    if(list.indexOf(m.name)==-1){
+                    if(modules.indexOf(m.name)==-1){
                         Stalker.exclude(m);
                         return false;
                     }
-                    console.log("Modules (exclude any): "+m.name);
+                    //console.log("Modules (exclude any): "+m.name);
                     return true;
                 });
             }
             else if(this._policy.modules == F.INCLUDE_ANY){
                 // excluded modules
-                list = this.getModuleList(this._scope.modules);
+                modules = this.getModuleList(this._scope.modules);
                 map = new ModuleMap((m) => {
-                    if(list.indexOf(m.name)==-1){
+                    if(modules.indexOf(m.name)>=-1){
                         Stalker.exclude(m);
                         return false;
                     }
-                    console.log("Modules (include any): "+m.name);
+                    //console.log("Modules (include any): "+m.name);
                     return true;
                 });
             }
             else{
-                list = this.getModuleList(this._scope.modules.i);
+                if(this._scope.modules == null || this._scope.modules.i == null){
+                    modules = Process.enumerateModules().map( x => x.name);
+                }else{
+                    modules = this.getModuleList (this._scope.modules.i);
+                }
+
+                //if(this._scope.modules == null)
                 const exc = this.getModuleList(this._scope.modules.e);
 
                 // filter authorized list with excluded modules
-                list = list.filter(x => { return exc.indexOf(x)==-1 });
+                modules = modules.filter(x => { return exc.indexOf(x)==-1 });
 
                 map = new ModuleMap((m) => {
                     // check if module is authorized
-                    if(list.indexOf(m.name)==-1){
+                    if(modules.indexOf(m.name)==-1){
                         Stalker.exclude(m);
                         return false;
                     }
-                    console.log("Modules (filter): "+m.name);
+                    // console.log("Modules (filter): "+m.name);
                     return true;
                 });
             }
         }else{
+            this._policy.modules = F.INCLUDE_ANY;
             map = new ModuleMap();
         }
 
