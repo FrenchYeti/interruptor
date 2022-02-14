@@ -784,7 +784,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
             pStalkerInterator.putCallout(function(context) {
                 const n = context.x8.toInt32();
 
-                if(isExcludedFn(n)) return;
+                if(isExcludedFn!=null && isExcludedFn(n)) return;
 
                 self.traceSyscallRet(context);
 
@@ -810,7 +810,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
 
                 const n = context.x8.toInt32();
 
-                if(isExcludedFn(n)) return;
+                if(isExcludedFn!=null && isExcludedFn(n)) return;
 
                 if(context.dxcFD==null) context.dxcFD = {};
                 const hook = self.svc_hk[n];
