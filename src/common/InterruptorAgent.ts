@@ -265,9 +265,13 @@ export class InterruptorAgent {
         let modules:string[];
         let map:ModuleMap;
 
-        if(this._scope.hasOwnProperty("modules")){
+        if(this._scope.hasOwnProperty("modules") && this._scope.modules!=null){
 
-            list = this.getModuleList(this._scope.modules);
+            if(!this._scope.hasOwnProperty("modules")){
+                this._policy.modules = F.INCLUDE_ANY;
+            }
+
+            //list = this._scope.modules != null ? this.getModuleList(this._scope.modules) : this.getModuleList(null);
 
             if(this._policy.modules == F.EXCLUDE_ANY){
                 // authorized modules
