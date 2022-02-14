@@ -401,8 +401,8 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
     smc_hk: any = {};
     irq_hk: any = {};
 
-    constructor(pConfig:any) {
-        super(pConfig);
+    constructor(pConfig:any, pDoFollowThread:any) {
+        super(pConfig, pDoFollowThread);
         this.configure(pConfig);
     }
 
@@ -523,17 +523,20 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
     }
 
     locatePC( pContext: any):string{
-        let l = "";
+        let l = "", tid:number =-1;
         const r = Process.findRangeByAddress(pContext.pc);
 
-        if(this.output.tid)
-            l += `[TID=${Process.getCurrentThreadId()}]`;
+        if(this.output.tid) {
+            tid = Process.getCurrentThreadId();
+            l += `\x1b[1;${this.output._tcolor}m [TID=${tid}] \x1b[0m`;
+
+        }
 
         if(this.output.module){
             if(r != null){
-                l =  `[${ r.file!=null ? r.file.path: '<no_path>'} +${pContext.pc.sub(r.base)}]`; ;
+                l +=  `[${ r.file!=null ? r.file.path: '<no_path>'} +${pContext.pc.sub(r.base)}]`; ;
             }else{
-                l = `[<unknow>  lr=${pContext.lr}]`;
+                l += `[<unknow>  lr=${pContext.lr}]`;
             }
         }
 
@@ -693,9 +696,23 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
 
 
         if(this.output.flavor == InterruptorAgent.FLAVOR_DXC){
-            pContext.log = this.locatePC(pContext)+'   \x1b[35;01m' + inst + ' :: '+pContext.x8+' \x1b[0m  '+s;
+            pContext.log = this.formatLogLine(pContext, s, inst, pContext.x8)
         }
 
+    }
+
+    /**
+     *
+     * @param pContext
+     * @param pSysc
+     * @param pInst
+     * @param pSysNum
+     */
+    formatLogLine( pContext:any, pSysc:string, pInst:string, pSysNum:number):string {
+        let s = this.locatePC(pContext);
+        s += this.output.inst ?  `   \x1b[35;01m${pInst} :: ${pSysNum} \x1b[0m` : "";
+        s += `   ${pSysc}`;
+        return s;
     }
 
     getSyscallError( pErrRet:number, pErrEnum:any[]):any {
