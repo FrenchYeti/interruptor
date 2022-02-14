@@ -397,7 +397,6 @@ export const KAPI = {
 
 export class LinuxArm64InterruptorAgent extends InterruptorAgent{
 
-    static API = DEF;
 
     filter_name: string[] = [];
     filter_num: string[] = [];
