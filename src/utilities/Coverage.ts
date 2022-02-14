@@ -77,7 +77,7 @@ export class CoverageAgent {
      */
     static EVENT_TOTAL_SIZE = 8;
 
-    enabled:boolean = true;
+    enabled:boolean = false;
     interruptor:InterruptorAgent = null;
     flavor:string = "dr";
     fname:string = null; // "drcov.dat";
