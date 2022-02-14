@@ -7,14 +7,15 @@
 import {InterruptorGenericException} from "../common/InterruptorException";
 import {InterruptorAgent} from "../common/InterruptorAgent";
 import {AbstractInterruptorFactory} from "../common/AbstractInterruptorFactory";
-import {LinuxArm64InterruptorAgent} from "./LinuxArm64InterruptorAgent";
+import {LinuxArm64InterruptorAgent, KAPI} from "./LinuxArm64InterruptorAgent";
 
 
 
 export class LinuxArm64InterruptorFactory extends AbstractInterruptorFactory {
 
-
-    //agents: InterruptorAgent[] = null;
+    KAPI:any = KAPI;
+    static HOOKED_PTHREAD_ROUTINE: any = {};
+    static AGENTS: any[] = [];
 
     constructor( pOptions:any = null) {
         super(pOptions);
