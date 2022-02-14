@@ -229,7 +229,7 @@ export class InterruptorAgent {
     getModuleList( pFilter:any,  pSrcList:Module[] = null,  pList:any = []):any {
 
         if(pFilter == null){
-            return false;
+            return [];
         }
 
         const mods:Module[] = pSrcList==null ? Process.enumerateModules() : pSrcList;
