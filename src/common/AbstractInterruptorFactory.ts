@@ -10,6 +10,7 @@
 export abstract class AbstractInterruptorFactory {
 
     opts:any = null;
+    static _tcolors: number[] = [0];
 
     static toScanPattern(pString:string):string {
         return pString.split('').map( c => c=c.charCodeAt(0).toString(16)).join(' ');
@@ -21,6 +22,23 @@ export abstract class AbstractInterruptorFactory {
 
     constructor(pOptions:any) {
         this.opts = pOptions;
+    }
+
+
+    /**
+     * To pick a random color to highlight line/thread
+     *
+     * @param pTID {number}
+     * @return number A color number
+     */
+    static _pickThreadColor():number {
+        let color;
+        do{
+            color = Math.floor( Math.random()*20)+31; //+30; //+30;
+        }while(AbstractInterruptorFactory._tcolors.indexOf(color)>-1);
+        AbstractInterruptorFactory._tcolors.push(color);
+        return color;
+        // this.output._threads[tid] = this._pickThreadColor();
     }
 
     abstract newAgentTracer(pConfig:any);

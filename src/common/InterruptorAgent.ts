@@ -60,6 +60,7 @@ export class InterruptorAgent {
 
 
     output:any = {
+        _tcolor: 0,
         flavor: "dxc",
         tid: true,
         pid: false,
