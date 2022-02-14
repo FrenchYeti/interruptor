@@ -15,6 +15,10 @@ export abstract class AbstractInterruptorFactory {
         return pString.split('').map( c => c=c.charCodeAt(0).toString(16)).join(' ');
     }
 
+    static printBackTrace(pContext:any):void {
+        console.log(Thread.backtrace(pContext, Backtracer.ACCURATE).map(DebugSymbol.fromAddress).join('\n') + '\n');
+    }
+
     constructor(pOptions:any) {
         this.opts = pOptions;
     }
