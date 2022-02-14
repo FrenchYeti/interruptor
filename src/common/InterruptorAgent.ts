@@ -355,7 +355,6 @@ export class InterruptorAgent {
     }
 
 
-
     trace( pStalkerInterator:any, pInstruction:any, pExtra:any):number {
         return 1;
     }
