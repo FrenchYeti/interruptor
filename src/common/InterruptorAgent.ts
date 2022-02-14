@@ -114,7 +114,7 @@ export class InterruptorAgent {
                     }
                     break;
                 case 'output':
-                    for(const i in pConfig.output) this[k].output = pConfig[k].output;
+                    for(const i in pConfig.output) this.output[i] = pConfig.output[i];
                     break;
                 case 'include':
                 case 'exclude':
