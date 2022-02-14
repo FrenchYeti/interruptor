@@ -376,7 +376,7 @@ export class InterruptorAgent {
      * To start to trace
      *
      */
-    start(){
+    start( pTID:number = -1){
 
 
         this._buildScope();
@@ -392,7 +392,17 @@ export class InterruptorAgent {
 
 
         // @ts-ignore
-        const tid = this.tid > -1 ? this.tid : Process.getCurrentThreadId()
+        let tid = pTID > -1 ? pTID : null;
+        if(tid === null){
+            if(this.tid > -1){
+                tid = this.tid;
+            }else{
+                tid = Process.getCurrentThreadId();
+            }
+        }
+
+
+
         const self = this;
         let pExtra:any = {};
 
