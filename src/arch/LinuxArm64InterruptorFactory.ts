@@ -76,7 +76,6 @@ export class LinuxArm64InterruptorFactory extends AbstractInterruptorFactory {
      * @param pConfig
      */
     newAgentTracer(pConfig: any):InterruptorAgent {
-        //const agent = new LinuxArm64InterruptorAgent(pConfig);
 
         const agent = new LinuxArm64InterruptorAgent(pConfig, LinuxArm64InterruptorFactory._followThread);
         //agent.buildScope();

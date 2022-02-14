@@ -514,7 +514,6 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
         if(sc == null) throw InterruptorGenericException.UNKNOW_SYSCALL(pIntName);
         if(pHooks.hasOwnProperty('onEnter') || pHooks.hasOwnProperty('onLeave')){
             this.svc_hk[sc[0]] = pHooks
-            console.log("[SVC HOOK] "+pIntName+" (int="+sc[0]+")");
         }
 
     }
