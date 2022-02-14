@@ -172,19 +172,13 @@ Interruptor.newAgentTracer({
 
 ## 4. Roadmap
 
-| Task  | Description  | Status  |
-|---|---|---|
-| Syscall trace | Improve syscall printed output  |   |
-| ARM 32bit| Add Aarch32 support |   |
-| ARM HVC| Improve ARM HyperVisor Call support (HVC)  |   |
-| ARM SMC| Add ARM Secure Monitor Call support (SMC)  |   |
-| Syscall arg parsing | Improve argument parsing and add API for each args with known type (including structures)  |   |
-| Signal trace | Add trace of signals  |   |
-| Strace options | Implement same options than *strace* tool   |   |
-| Follow Thread  | Add follow thread support to track multi threaded exec  |   |
-| Follow Fork  | Follow automatically child processes  |   |
-| Multi-process (isolated, ...)  | Follow several process in same time.  |   |
-| Incremental drcov | Instead of writing all coverage data one time into output file, update it at runtime to handle case where process crashes |   |
+
+**How to help ?**
+
+The following links enumerates Linux syscall for several architectures, feel free to extend Interruptor and do a PR :) 
+
+https://marcin.juszkiewicz.com.pl/download/tables/syscalls.html
+
 
 ## 5. Documentation
 
