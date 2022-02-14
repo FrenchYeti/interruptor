@@ -390,6 +390,11 @@ SVC.map(x => {
 
 let isExcludedFn:any = null;
 
+export const KAPI = {
+    CONST: DEF,
+    SVC: SVC_MAP_NAME
+};
+
 export class LinuxArm64InterruptorAgent extends InterruptorAgent{
 
     static API = DEF;
