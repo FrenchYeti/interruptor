@@ -407,6 +407,8 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
     }
 
     _setupDelegateFilters( pTypes:string, pOpts:any):void {
+        if(pOpts == null) return;
+
         const o = pOpts;
         const f = this[pTypes];
 
@@ -734,7 +736,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
             switch (ret.l) {
                 case L.SIZE:
                     if(this.output.dump_buff)
-                        ret = "(len="+pContext.x0+") "+pContext["x"+ret.r].readCString();
+                        ret = "(len="+pContext.x0+") "; //+pContext["x"+ret.r].readCString();
                     else
                         ret = pContext.x0;
                     break;
