@@ -272,6 +272,50 @@ Below, a complete overview of options  :
     }
 }
 ```
+#### 5.B.1 Filtering
+
+**! Important !** 
+
+When a system is excluded, it is not hooked and printed. By consequence, some feature can not work properly such as file descriptor lookup when "openat" is excluded.
+
+
+All interruption types can be filtered using at least the interruption number. Additionnally, Modules and System calls can be filtered by name (string pattern or regexp)  or by properties (using a filtering function).
+
+```
+Interruptor.newAgentTracer({
+    followThread: false,
+    include: {
+        modules: ["libc.so"],
+        syscalls: [/^get/,"read","openat","close",/^m/]
+    },
+    exclude: {
+        syscalls: [ /time$/]
+    },
+    output: {
+        tid: true,
+        inst: true,
+        module: true
+    }
+}).start();
+```
+
+
+Modules and System calls are filtering by following one of these tree ways : Hook/trace only instructions
+* from a list of  mapped modules
+* from modules not included into "exclude list" of mapped modules
+* from included modules - excluded modules
+
+```
+include: {
+    syscalls: [
+        "read",
+        "openat",
+        "close",
+        /^m/,       // mprotect, madvise, mmap, ...
+        /^get/     // getpriority, getuid, getpid,  ...
+    ]
+},
+```
 
 ### 5.C Tracer types
 
