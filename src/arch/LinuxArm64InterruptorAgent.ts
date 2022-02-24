@@ -313,7 +313,7 @@ const SVC = [
     [230,"mlockall",0xe6,[{t:T.INT32, n:"flags", l:L.FLAG, f:X.MCL}],{t:T.INT32, e:[E.EPERM,E.EINVAL,E.ENOMEM]}],
     [231,"munlockall",0xe7,[],{t:T.INT32, e:[E.EPERM,E.EINVAL,E.ENOMEM]}],
     [232,"mincore",0xe8,[A.ADDR,A.SIZE,"unsigned char * vec"]],
-    [233,"madvise",0xe9,[A.ADDR,A.SIG, {t:T.INT32, n:"behavior", l:L.FLAG, f:X.MADV}],{ t:T.INT32, e:[E.EAGAIN,E.EBADF,E.EINVAL,E.EIO, E.ENOMEM]}],
+    [233,"madvise",0xe9,[A.ADDR,A.SIZE, {t:T.INT32, n:"behavior", l:L.FLAG, f:X.MADV}],{ t:T.INT32, e:[E.EAGAIN,E.EBADF,E.EINVAL,E.EIO, E.ENOMEM]}],
     [234,"remap_file_pages",0xea,["unsigned long start","unsigned long size","unsigned long prot","unsigned long pgoff","unsigned long flags"]],
     [235,"mbind",0xeb,[A.ADDR,A.LEN,"unsigned long mode","const unsigned long *nmask","unsigned long maxnode","unsigned flags"]],
     [236,"get_mempolicy",0xec,["int *policy","unsigned long *nmask","unsigned long maxnode","unsigned long addr","unsigned long flags"]],
