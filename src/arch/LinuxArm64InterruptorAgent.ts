@@ -40,10 +40,12 @@ const A = {
     ADDR: {t:T.POINTER64, n:"addr", l:L.VADDR, f:X.RANGE},
     CONST_PTR: {t:T.POINTER64, n:"value", c:true},
     MPROT: {t:T.INT32, n:"prot", l:L.FLAG, f:X.MPROT},
+    FMODE: {t:T.INT32, n:"mode", l:L.FLAG, f:X.F_MODE},
     CLKID: {t:T.INT32, n:"clockid", l:L.FLAG, f:X.CLK}
 }
 const RET:any = {
     INFO: {t:T.INT32, e:[E.EAGAIN,E.EINVAL,E.EPERM]},
+    ACCESS: {t:T.INT32, e:[E.EACCES, E.EFAULT, E.EINVAL, E.ELOOP, E.ENAMETOOLONG, E.ENOENT, E.ENOMEM, E.ENOTDIR, E.EOVERFLOW, E.EIO, E.ETXTBSY, E.EROFS]},
     STAT: {t:T.INT32, e:[E.EACCES, E.EBADF, E.EFAULT, E.EINVAL, E.ELOOP, E.ENAMETOOLONG, E.ENOENT, E.ENOMEM, E.ENOTDIR, E.EOVERFLOW]},
     LINK: {t:T.INT32, e:[E.EACCES,E.EEXIST, E.EFAULT, E.EIO, E.ELOOP, E.EMLINK, E.ENAMETOOLONG, E.ENOENT, E.ENOMEM, E.ENOSPC,E.ENOTDIR, E.EPERM,E.EROFS,E.EXDEV] },
     OPEN: {t:T.INT32, e:[E.EACCES,E.EEXIST, E.EFAULT, E.ENODEV, E.ENOENT, E.ENOMEM, E.ENOSPC, E.ENOTDIR, E.ENXIO, E.EPERM, E.EROFS, E.ETXTBSY,  E.EFBIG, E.EINTR, E.EISDIR, E.ELOOP, E.ENAMETOOLONG, E.EMFILE,E.ENFILE,E.ENOMEM]},
@@ -105,7 +107,7 @@ const SVC = [
     [46,"ftruncate",0x2e,[A.FD,A.LEN],RET.OPEN /* similar to open() */],
     [47,"fallocate",0x2f,[
         A.FD,"int mode","loff_t offset","loff_t len"]],
-    [48,"faccessat",0x30,[A.DFD,{t:T.STRING, n:"filename", c:true},"int mode"]],
+    [48,"faccessat",0x30,[A.DFD,A.CONST_FNAME,A.FMODE],RET.ACCESS],
     [49,"chdir",0x31,[{t:T.CHAR_BUFFER, n:"path", l:L.PATH, c:true}]],
     [50,"fchdir",0x32,[A.FD],{t:T.INT32, e:[E.EACCES,E.EFAULT,E.EIO,E.ELOOP,E.ENAMETOOLONG,E.ENOENT,E.ENOMEM,E.ENOTDIR,E.EPERM,E.EBADF]}],
     [51,"chroot",0x33,[{t:T.CHAR_BUFFER, n:"path", l:L.PATH, c:true}],{t:T.INT32, e:[E.EACCES,E.EFAULT,E.EIO,E.ELOOP,E.ENAMETOOLONG,E.ENOENT,E.ENOMEM,E.ENOTDIR,E.EPERM]}],
@@ -271,12 +273,12 @@ const SVC = [
     [195,"shmctl",0xc3,["int shmid","int cmd","struct shmid_ds *buf"]],
     [196,"shmat",0xc4,["int shmid","char *shmaddr","int shmflg"]],
     [197,"shmdt",0xc5,["char *shmaddr"]],
-    [198,"socket",0xc6,["int","int","int"]],
+    [198,"socket",0xc6,[{t:T.INT32, n:"domain", l:L.FLAG, f:X.PF},{t:T.INT32, n:"type", l:L.FLAG, f:X.SOCK},"int"]],
     [199,"socketpair",0xc7,["int","int","int","int *"]],
     [200,"bind",0xc8,["int","struct sockaddr *","int"]],
     [201,"listen",0xc9,["int","int"]],
     [202,"accept",0xca,["int","struct sockaddr *","int *"]],
-    [203,"connect",0xcb,["int","struct sockaddr *","int"]],
+    [203,"connect",0xcb,[A.FD,"struct sockaddr *","int"]],
     [204,"getsockname",0xcc,["int","struct sockaddr *","int *"]],
     [205,"getpeername",0xcd,["int","struct sockaddr *","int *"]],
     [206,"sendto",0xce,["int","void *","size_t","unsigned","struct sockaddr *","int"]],
@@ -304,8 +306,8 @@ const SVC = [
     [222,"mmap",0xde,[A.START_ADDR,A.SIZE, A.MPROT, {t:T.INT32, n:"flags", l:L.FLAG, f:X.MAP},
         {t:T.UINT32, n:"fd", l:L.MFD}, {t:T.UINT32, n:"offset", l:L.SIZE}],{t:T.INT32, e:[ E.EACCES, E.EAGAIN, E.EBADF, E.EINVAL, E.ENFILE, E.ENODEV, E.ENOMEM, E.ETXTBSY]}],
     [223,"fadvise64",0xdf,[{t:T.UINT32, n:"fd", l:L.FD},"loff_t offset",A.SIZE,"int advice"]],
-    [224,"swapon",0xe0,["const char *specialfile","int swap_flags"]],
-    [225,"swapoff",0xe1,["const char *specialfile"]],
+    [224,"swapon",0xe0,[A.CONST_FNAME,"int swap_flags"]],
+    [225,"swapoff",0xe1,[A.CONST_FNAME]],
     [226,"mprotect",0xe2,[A.ADDR,A.SIZE, A.MPROT],{t:T.INT32, e:[E.EACCES,E.EFAULT,E.EINVAL,E.ENOMEM]}],
     [227,"msync",0xe3,[A.ADDR,A.SIZE,{t:T.ULONG, n:"flags", l:L.FLAG, f:X.MS}],{t:T.INT32, e:[E.EBUSY,E.EINVAL,E.ENOMEM]}],
     [228,"mlock",0xe4,[A.ADDR,A.SIZE],{t:T.INT32, e:[E.EPERM,E.EINVAL,E.ENOMEM]}],
@@ -392,7 +394,9 @@ let isExcludedFn:any = null;
 
 export const KAPI = {
     CONST: DEF,
-    SVC: SVC_MAP_NAME
+    SVC: SVC_MAP_NAME,
+    SVC_ARG: SVC_ARG,
+    ERR: DEF.ERR
 };
 
 export class LinuxArm64InterruptorAgent extends InterruptorAgent{
@@ -539,7 +543,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
 
         if(this.output.module){
             if(r != null){
-                l +=  `[${ r.file!=null ? r.file.path: '<no_path>'} +${pContext.pc.sub(r.base)}]`; ;
+                l +=  `[${ r.file!=null ? r.file.path: r.base} +${pContext.pc.sub(r.base)}]`; ;
             }else{
                 l += `[<unknow>  lr=${pContext.lr}]`;
             }
