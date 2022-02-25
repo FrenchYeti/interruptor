@@ -5,7 +5,14 @@ export const K = {
     P_PID: [1],
     P_PGID: [2],
     P_PIDFD: [3]
-}
+};
+export const FMODE = {
+    F_OK: [0],
+    X_OK: [1],
+    W_OK: [2],
+    R_OK: [4]
+};
+
 export const O_ = {
     O_ACCMODE: 0o00000003,
     O_RDONLY: 0o0000000,
