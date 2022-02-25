@@ -700,6 +700,12 @@ export const X = {
     SIG: function(f){
         return l(f,S);
     },
+    PF: function(f){
+        return l(f,PF_);
+    },
+    SOCK: function(f){
+        return stringifyBitmap(f,SOCK_);
+    },
     MADV: function(f){
         return l(f,MADV_);
     },
@@ -724,6 +730,9 @@ export const X = {
     },
     O_MODE: function(f){
         return stringifyBitmap(f,O_);
+    },
+    F_MODE: function(f){
+        return stringifyBitmap(f,FMODE);
     },
     UMOUNT: function(f){
         return stringifyBitmap(f,MNT_);
