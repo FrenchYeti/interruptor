@@ -191,6 +191,7 @@ export const MADV_ = {
     MADV_COLD: [20],
     MADV_PAGEOUT: [21]
 };
+
 export const PR_ = {
     OPT: {
         PR_CAP_AMBIENT: [47],
@@ -651,7 +652,12 @@ export const E = {
     EOVERFLOW : [139,"Value too large for defined data type"]
 };
 
-for(const k in E) E[k].push(k);
+export const ERR = {};
+
+for(const k in E){
+    E[k].push(k);
+    ERR[k] = E[k][0];
+}
 
 function l( val, list){
     for(const k in list) if(val == list[k][0]) return k;
