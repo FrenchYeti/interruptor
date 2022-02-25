@@ -87,7 +87,7 @@ frida-compile examples/simple_strace.js -o trace.js && frida -U -f <PACKAGE> -l 
 ### 2.A Simple tracing
 Simple tracing without hook from attach moment, with excluded module and syscall (by name)
 ```
-var Interruptor = require('./android-arm64-strace.min.js').default.LinuxArm64();
+var Interruptor = require('./android-arm64-strace.min.js').target.LinuxArm64();
 
 // better results, when app is loaded
 Java.perform(()=>{
@@ -187,7 +187,7 @@ https://marcin.juszkiewicz.com.pl/download/tables/syscalls.html
 First, you need to get the tracer factory adapted to your OS/Architecture :
 For now only "LinuxArm64()" is available.
 ```
-var Interruptor = require('../dist/index.js').default.LinuxArm64();
+var Interruptor = require('../dist/index.js').target.LinuxArm64();
 ```
 
 Next step is to intanciante a tracer with a specific options. 
@@ -201,21 +201,21 @@ A full list of options can be found into the next section.
 Final step, choose when you want to start to trace :
 * A. When frida script is executed
 ```
-var Interruptor = require('../dist/index.js').default.LinuxArm64();
+var Interruptor = require('../dist/index.js').target.LinuxArm64();
 
 Interruptor.newAgentTracer( /* opts */).start();
 ```
 
 * B. The first time a module is opened by the linker
 ```
-var Interruptor = require('../dist/index.js').default.LinuxArm64();
+var Interruptor = require('../dist/index.js').target.LinuxArm64();
 
 Interruptor.newAgentTracer( /* opts */).startOnLoad(/my_lib\.so$/g);
 ```
 
 * C. From your hooks
 ```
-var Interruptor = require('../dist/index.js').default.LinuxArm64();
+var Interruptor = require('../dist/index.js').target.LinuxArm64();
 
 Interceptor.attach( /* ... */,{
     onEnter: function(){
