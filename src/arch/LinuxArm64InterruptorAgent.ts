@@ -83,7 +83,7 @@ const SVC = [
     [22,"epoll_pwait",0x16,["int epfd","struct epoll_event *events","int maxevents","int timeout","const sigset_t *sigmask","size_t sigsetsize"]],
     [23,"dup",0x17,[A.FD],{t:T.UINT32, n:"fd", l:L.FD, e:[E.EBADF, E.EBUSY, E.EINTR, E.EINVAL, E.EMFILE]}],
     [24,"dup3",0x18,[{t:T.UINT32, n:"old_fd", l:L.FD},{t:T.UINT32, n:"old_fd", l:L.FD}, {t:T.INT32, n:"flags", l:L.FLAG}],{t:T.UINT32, n:"fd", l:L.FD, e:[E.EBADF, E.EBUSY, E.EINTR, E.EINVAL, E.EMFILE]}],
-    [25,"fcntl",0x19,[A.FD,{t:T.UINT32, name:"cmd", l:L.FLAG, f:X.FNCTL} /*"unsigned int cmd"*/,"unsigned long arg"]],
+    [25,"fcntl",0x19,[A.FD,{t:T.UINT32, n:"cmd", l:L.FLAG, f:X.FNCTL} ,{t:T.ULONG, n:"args", l:L.FLAG, r:"x1", f:X.FCNTL_ARGS}], {t:T.INT32, n:"ret", r:"x1", l:L.FLAG, f:X.FCNTL_RET}],
     [26,"inotify_init1",0x1a,["int flags"]],
     [27,"inotify_add_watch",0x1b,[A.FD,A.CONST_PATH,"u32 mask"]],
     [28,"inotify_rm_watch",0x1c,[A.FD,"__s32 wd"]],
