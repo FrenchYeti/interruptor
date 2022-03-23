@@ -16,6 +16,22 @@ export abstract class AbstractInterruptorFactory {
         return pString.split('').map( c => c=c.charCodeAt(0).toString(16)).join(' ');
     }
 
+    /**
+     * To convert a string as a byte array, with optional padding
+     *
+     * @param pString
+     * @param pSize
+     * @param pPadding
+     *
+     */
+    static toByteArray(pString:string, pSize:number=-1, pPadding:number = 0):number[] {
+        let arr:number[] = pString.split('').map( c => c.charCodeAt(0));
+        if(pSize>-1 && pSize>pString.length){
+            do{ arr.push(pPadding) }while(arr.length < pSize-1);
+        }
+        return arr;
+    }
+
     static printBackTrace(pContext:any):void {
         console.log(Thread.backtrace(pContext, Backtracer.ACCURATE).map(DebugSymbol.fromAddress).join('\n') + '\n');
     }
