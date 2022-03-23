@@ -542,7 +542,15 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
 
         if(this.output.module){
             if(r != null){
-                l +=  `[${ r.file!=null ? r.file.path: r.base} +${pContext.pc.sub(r.base)}]`; ;
+                if(r.file != null){
+                    if(this.output.hidePackage!=null){
+                        l +=  `[${ r.file.path.replace(this.output.hidePackage, "HIDDEN")} +${pContext.pc.sub(r.base)}]`; ;
+                    }else{
+                        l +=  `[${ r.file.path } +${pContext.pc.sub(r.base)}]`; ;
+                    }
+                }else{
+                    l +=  `[${r.base} +${pContext.pc.sub(r.base)}]`; ;
+                }
             }else{
                 l += `[<unknow>  lr=${pContext.lr}]`;
             }
