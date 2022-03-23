@@ -35,6 +35,7 @@ export class LinuxArm64InterruptorFactory extends AbstractInterruptorFactory {
     utils(){
         return {
             toScanPattern: AbstractInterruptorFactory.toScanPattern,
+            toByteArray: AbstractInterruptorFactory.toByteArray,
             printBackTrace: AbstractInterruptorFactory.printBackTrace
         };
     }
@@ -49,7 +50,9 @@ export class LinuxArm64InterruptorFactory extends AbstractInterruptorFactory {
 
                 if(routine != null && !LinuxArm64InterruptorFactory.HOOKED_PTHREAD_ROUTINE.hasOwnProperty(routine)){
                     LinuxArm64InterruptorFactory.HOOKED_PTHREAD_ROUTINE[routine+""]=true;
-                    console.log("["+Process.findModuleByAddress(this.context.pc).name+"] Hooking routine : "+routine+" "+JSON.stringify(LinuxArm64InterruptorFactory.HOOKED_PTHREAD_ROUTINE));
+                    console.log("["+Process.findModuleByAddress(this.context.pc).name+"] Hooking routine : "+routine+" "
+                        +JSON.stringify(LinuxArm64InterruptorFactory.HOOKED_PTHREAD_ROUTINE));
+
                     Interceptor.attach( routine, {
                         onEnter: function(a){
                             const m = Process.findModuleByAddress(this.context.pc);
