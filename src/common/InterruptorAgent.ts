@@ -10,6 +10,9 @@ export enum F {
 
 export class InterruptorAgent {
 
+
+    _tids:number[] = [];
+
     static FLAVOR_DXC = "dxc";
     static FLAVOR_STRACE= "strace";
 
@@ -17,6 +20,7 @@ export class InterruptorAgent {
 
     ranges: any = new Map();
     modules: any[] = [];
+
 
     /**
      * PID of process to stalk, when followFork is enabled or on attach
@@ -66,6 +70,7 @@ export class InterruptorAgent {
         pid: false,
         module: true,
         dump_buff: true,
+        hide: null,
         highlight: {
             syscalls: []
         }
@@ -366,9 +371,9 @@ export class InterruptorAgent {
      * Must be overridden by architecture specific interruptors
      *
      * @param pModuleRegExp
-     * @param pCondition
+     * @param pOptions
      */
-    startOnLoad( pModuleRegExp:RegExp, pCondition:any = null):any {
+    startOnLoad( pModuleRegExp:RegExp, pOptions:any = null):any {
         return new Error("Dynamic loading is not supported");
     }
 
@@ -401,6 +406,13 @@ export class InterruptorAgent {
             }
         }
 
+        if(this._tids.indexOf(tid)>-1){
+            console.warn("[INTERRUPTOR][STARTING] Thread already tracked");
+            return;
+        }else{
+            console.warn("[INTERRUPTOR][STARTING] Traching thread "+tid+" ["+this._tids.join(",")+"]");
+            this._tids.push(tid);
+        }
 
 
         const self = this;
@@ -462,6 +474,7 @@ export class InterruptorAgent {
         }
 
         // @ts-ignore
+        // Stalker.trustThreshold = 1;
         Stalker.follow(tid, opts);
 
         // prevent interceptor issue
