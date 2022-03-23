@@ -562,8 +562,9 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
         return l;
     }
 
-    startOnLoad( pModuleRegExp:RegExp, pCondition:any = null):any {
+    startOnLoad( pModuleRegExp:RegExp, pOptions:any = null):any {
         let self=this, do_dlopen = null, call_ctor = null, match=null;
+        let opts = pOptions;
         Process.findModuleByName('linker64').enumerateSymbols().forEach(sym => {
             if (sym.name.indexOf('do_dlopen') >= 0) {
                 do_dlopen = sym.address;
@@ -584,22 +585,37 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
             onEnter:function () {
                 if(match==null) return;
                 const tmp = match;
-                if(pCondition!==null){
-                    if(!(pCondition)(match, this)){
+
+                if(pOptions!==null && pOptions.hasOwnProperty('condition')){
+                    if(!pOptions.condition(match, this)){
                         match = null;
                         return ;
                     }
                 }
 
+
+
                 console.warn("[INTERRUPTOR][STARTING] Module '"+match+"' is loading, tracer will start");
                 match = null;
+
                 self.start();
-                self.onStart( tmp, this);
+
+                if(pOptions.hasOwnProperty('threshold')){
+                    console.log(self.loadCtr, pOptions.threshold)
+                    if(self.loadCtr < pOptions.threshold){
+                        self.loadCtr++;
+                        self.onStart( tmp, this);
+                    }else{
+                        console.error("[INTERRUPTOR][STARTING] Threshold reached");
+                        match = null;
+                        return ;
+                    }
+                }else{
+                    self.onStart( tmp, this);
+                }
+
             }
         });
-
-
-
     }
 
     traceSyscall( pContext:any, pHookCfg:any = null){
@@ -664,7 +680,17 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                             break;
                         }
                     case L.FLAG:
-                        p += `${(vVal.f)(rVal)}`;
+                        if(vVal.r != null){
+                            if(Array.isArray(vVal.r)){
+                                let t = [];
+                                vVal.r.map( x => t.push(pContext[x]));
+                                p += `${(vVal.f)(rVal, t)}`;
+                            }else{
+                                p += `${(vVal.f)(rVal, [pContext[vVal.r]])}`;
+                            }
+                        }else{
+                            p += `${(vVal.f)(rVal)}`;
+                        }
                         pContext.dxcOpts[vOff] = rVal;
                         break;
                     default:
@@ -733,7 +759,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
 
     getSyscallError( pErrRet:number, pErrEnum:any[]):any {
         for(let i=0; i<pErrEnum.length ; i++){
-            if(pErrRet === pErrEnum[i][0]){
+            if(pErrRet === -pErrEnum[i][0] ){
                 return pErrRet+' '+pErrEnum[i][2];
             }
         }
@@ -743,7 +769,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
     traceSyscallRet( pContext:any, pHookCfg:any = null){
 
 
-
+        let err;
         let ret = pContext.dxcRET;
         if(ret != null){
 
@@ -756,27 +782,32 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                     break;
                 case L.DFD:
                 case L.FD:
-                    if(pContext.x0 >= 0){
+                    if(pContext.x0.toInt32() >= 0){
                         if(pContext.dxcFD==null) pContext.dxcFD = {};
                         pContext.dxcFD[ pContext.x0.toInt32()+""] = pContext.dxcOpts[ret.r];
                         ret = "("+(L.DFD==ret.l?"D":"")+"FD) "+pContext.x0;
                     }else if(ret.e){
-                        let err = this.getSyscallError(pContext.x0, ret.e);
-                        ret = "(ERROR) "+err[2]+" "+err[1]+" "  ;
+                        let err = this.getSyscallError(pContext.x0.toInt32(), ret.e);
+                        ret = "(ERROR) "+err+" "  ;
                     }else{
                         ret = "(ERROR) "+pContext.x0;
                     }
 
                     break;
+                case L.FCNTL_RET:
+                    ret = X.FCNTL_RET(pContext.x0, pContext.x1);
+                    break;
                 default:
                     if(ret.e != null ){
-                        ret = this.getSyscallError(pContext.x0, ret.e);
-                        if(ret == 0){
-                            ret = pContext.x0+' SUCCESS';
+                        err = this.getSyscallError(pContext.x0.toInt32(), ret.e);
+                        if(err == 0){
+                            ret = pContext.x0.toUInt32().toString(16)+' SUCCESS';
+                        }else{
+                            ret = err ;
                         }
                     }
                     else
-                        ret = pContext.x0;
+                        ret = pContext.x0.toUInt32().toString(16);
                     break;
             }
         }else{
