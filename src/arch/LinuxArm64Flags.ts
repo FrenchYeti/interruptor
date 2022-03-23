@@ -679,6 +679,13 @@ export const X = {
         else
             return  0; // no flag
     },
+    ACCESS_FLAGS: function(f){
+        return stringifyBitmap(f, {
+            AT_SYMLINK_NOFOLLOW: [0x100],
+            AT_NO_AUTOMOUNT: [0x800],
+            AT_EMPTY_PATH: [0x1000]
+        });
+    },
     PRCTL_OPT: function(f){
         return l(f,PR_.OPT);
     },
@@ -696,6 +703,24 @@ export const X = {
     },
     FNCTL: function(f){
         return l(f,F_);
+    },
+    FCNTL_RET: function(f, cmd){
+        switch (cmd) {
+            case F_.F_GETFL:
+                return X.O_MODE(f);
+                break;
+            default:
+                return f;
+        }
+    },
+    FCNTL_ARGS: function(f, cmd){
+        switch (cmd) {
+            case F_.F_SETFL:
+                return X.O_MODE(f);
+                break;
+            default:
+                return f;
+        }
     },
     SIG: function(f){
         return l(f,S);
