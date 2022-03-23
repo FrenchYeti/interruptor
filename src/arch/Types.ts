@@ -18,7 +18,9 @@ export enum L {
     MFD, // mapped fd
     UID,
     GID,
-    UTSNAME
+    UTSNAME,
+    FCNTL_ARGS,
+    FCNTL_RET
 }
 
 export enum T {
