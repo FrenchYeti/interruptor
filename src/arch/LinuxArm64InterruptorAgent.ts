@@ -115,7 +115,7 @@ const SVC = [
     [53,"fchmodat",0x35,[A.DFD,A.CONST_PATH,"umode_t mode"]],
     [54,"fchownat",0x36,[A.DFD,A.CONST_PATH,A.UID,A.GID,"int fla"]],
     [55,"fchown",0x37,[A.FD,A.UID,A.GID]],
-    [56,"openat",0x38,[A.DFD, A.CONST_FNAME,"int flags",{t:T.UINT32, n:"mode", l:L.O_FLAGS, f:X.O_MODE}],RET.OPENAT],
+    [56,"openat",0x38,[A.DFD, A.CONST_FNAME,{t:T.UINT32, n:"mode", l:L.FLAG, f:X.O_MODE},"int mode",],RET.OPENAT],
     [57,"close",0x39,[A.FD]],
     [58,"vhangup",0x3a,[]],
     [59,"pipe2",0x3b,["int *fildes","int flags"]],
