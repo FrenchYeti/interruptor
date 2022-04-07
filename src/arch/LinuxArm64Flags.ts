@@ -372,6 +372,41 @@ export const PR_ = {
 };
 
 
+
+/*S_ISLNK(m) (((m) & S_IFMT) == S_IFLNK)
+S_ISREG(m) (((m) & S_IFMT) == S_IFREG)
+S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
+S_ISCHR(m) (((m) & S_IFMT) == S_IFCHR)
+S_ISBLK(m) (((m) & S_IFMT) == S_IFBLK)
+S_ISFIFO(m) (((m) & S_IFMT) == S_IFIFO)
+S_ISSOCK(m) (((m) & S_IFMT) == S_IFSOCK)*/
+export const S_ = {
+    S_IFMT: [0o0170000],
+    S_IFSOCK: [0o140000],
+    S_IFLNK: [0o120000],
+    S_IFREG: [0o100000],
+    S_IFBLK: [0o060000],
+    S_IFDIR: [0o040000],
+    S_IFCHR: [0o020000],
+    S_IFIFO: [0o010000],
+    S_ISUID: [0o004000],
+    S_ISGID: [0o002000],
+    S_ISVTX: [0o001000],
+    S_IRWXU: [0o0700],
+    S_IRUSR: [0o0400],
+    S_IWUSR: [0o0200],
+    S_IXUSR: [0o0100],
+    S_IRWXG: [0o0070],
+    S_IRGRP: [0o0040],
+    S_IWGRP: [0o0020],
+    S_IXGRP: [0o0010],
+    S_IRWXO: [0o0007],
+    S_IROTH: [0o0004],
+    S_IWOTH: [0o0002],
+    S_IXOTH: [0o0001]
+};
+
+
 export const MS_ = {
     MS_ASYNC: 1,
     MS_INVALIDATE: 2,
@@ -463,6 +498,14 @@ function stringifyBitmap(val:number, flags:any):string{
     let s = "";
     for(const f in flags){
         if((val & flags[f]) == flags[f]) s += (s.length>0?" | ":"")+f;
+    }
+
+    return s;
+}
+function stringifyBitmapArr(val:number, flags:any):string{
+    let s = "";
+    for(const f in flags){
+        if((val & flags[f][0]) == flags[f][0]) s += (s.length>0?" | ":"")+f;
     }
 
     return s;
@@ -560,6 +603,31 @@ export const S = {
     MINSIGSTKSZ: [2048],
     SIGSTKSZ: [8192],
 };
+
+export const SEEK_ = {
+    SEEK_SET: [0],
+    SEEK_CUR: [1],
+    SEEK_END: [2],
+    SEEK_DATA: [3],
+    SEEK_HOLE: [4]
+};
+
+export const SCHED_ = {
+    SCHED_NORMAL: [0],
+    SCHED_FIFO: [1],
+    SCHED_RR: [2],
+    SCHED_BATCH: [3],
+    SCHED_IDLE: [5],
+    SCHED_DEADLINE: [6],
+    SCHED_RESET_ON_FORK: [0x40000000],
+    SCHED_FLAG_RESET_ON_FORK: [0x01],
+    SCHED_FLAG_RECLAIM: [0x02],
+    SCHED_FLAG_DL_OVERRUN: [0x04],
+    SCHED_FLAG_KEEP_POLICY: [0x08],
+    SCHED_FLAG_KEEP_PARAMS: [0x10],
+    SCHED_FLAG_UTIL_CLAMP_MIN: [0x20],
+    SCHED_FLAG_UTIL_CLAMP_MAX: [0x40]
+}
 
 //
 export const E = {
@@ -687,6 +755,7 @@ export const E = {
     EOVERFLOW : [139,"Value too large for defined data type"]
 };
 
+
 export const ERR = {};
 
 for(const k in E){
@@ -726,6 +795,15 @@ export const X = {
     },
     CLK: function(f){
         return l(f,CLOCK);
+    },
+    SCHED: function(f){
+        return l(f,SCHED_);
+    },
+    SEEK: function(f){
+        return l(f,SEEK_);
+    },
+    FUTEX_OPE: function(f){
+        return l(f,FUTEX);
     },
     PTRACE: function(f){
         return l(f,PTRACE_);
@@ -784,6 +862,9 @@ export const X = {
     },
     ATTR: function(f){
         return f;
+    },
+    UMASK: function(f){
+        return stringifyBitmapArr(f,S_);
     },
     O_FLAG: function(f){
         return stringifyBitmap(f,O_);
