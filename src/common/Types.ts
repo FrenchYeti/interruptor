@@ -20,7 +20,11 @@ export enum L {
     GID,
     UTSNAME,
     FCNTL_ARGS,
-    FCNTL_RET
+    FCNTL_RET,
+    TIME,
+    INODE,
+    DEV,
+    DSTRUCT
 }
 
 export enum T {
