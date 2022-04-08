@@ -24,4 +24,10 @@ export class TypedData {
         t.n = pName;
         return t;
     }
+
+    asReturn( pError:any[]){
+        let t:TypedData = new TypedData(this);
+        t.e = pError;
+        return t;
+    }
 }

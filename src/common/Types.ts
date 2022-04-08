@@ -2,8 +2,8 @@
 export enum L {
     PATH,
     SIZE,
-    FD,
-    DFD,
+    FD, // File Descriptor
+    DFD, // Directory File Descriptor
     FLAG,
     ATTRMODE,
     O_FLAGS,
@@ -15,16 +15,18 @@ export enum L {
     SIG,
     XATTR_LIST,
     F_,
-    MFD, // mapped fd
+    MFD, // Mapped FD
     UID,
     GID,
     UTSNAME,
-    FCNTL_ARGS,
-    FCNTL_RET,
-    TIME,
-    INODE,
-    DEV,
-    DSTRUCT
+    FCNTL_ARGS, // fnctl() args
+    FCNTL_RET, // fnctl() ret
+    TIME, // Timestamp
+    INODE, // Inode
+    DEV, // Device
+    DSTRUCT,
+    EPFD, // EPoll File Descriptor
+    WD// Watch Descriptor
 }
 
 export enum T {
