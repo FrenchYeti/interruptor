@@ -36,6 +36,65 @@ export const O_ = {
     O_TMPFILE: 0o20040000
 };
 
+export const INOTIFY_FLAGS= {
+    IN_NONBLOCK: [O_.O_NONBLOCK],
+    IN_CLOEXEC: [O_.O_CLOEXEC]
+};
+
+export const INOTIFY_MASK = {
+	IN_ACCESS: [0x00000001],
+	IN_MODIFY: [0x00000002],
+	IN_ATTRIB: [0x00000004],
+	IN_CLOSE_WRITE: [0x00000008],
+	IN_CLOSE_NOWRITE: [0x00000010],
+	IN_CLOSE: [(0x00000008 | 0x00000010)],
+	IN_OPEN: [0x00000020],
+	IN_MOVED_FROM: [0x00000040],
+	IN_MOVED_TO: [0x00000080],
+	IN_MOVE: [(0x00000040 | 0x00000080)],
+	IN_CREATE: [0x00000100],
+	IN_DELETE: [0x00000200],
+	IN_DELETE_SELF: [0x00000400],
+	IN_MOVE_SELF: [0x00000800],
+	IN_ALL_EVENTS: [0x00000fff],
+	IN_UNMOUNT: [0x00002000],
+	IN_Q_OVERFLOW: [0x00004000],
+	IN_IGNORED: [0x00008000],
+	IN_ONLYDIR: [0x01000000],
+	IN_DONT_FOLLOW: [0x02000000],
+	IN_EXCL_UNLINK: [0x04000000],
+	IN_MASK_CREATE: [0x10000000],
+	IN_MASK_ADD: [0x20000000],
+	IN_ISDIR: [0x40000000],
+	IN_ONESHOT: [0x80000000]
+};
+
+export const EPOLL_CTL = {
+    EPOLL_CTL_ADD: [1],
+    EPOLL_CTL_DEL: [2],
+    EPOLL_CTL_MOD: [3],
+};
+
+export const EPOLL_EV = {
+    //EPOLL_CLOEXEC: [O_.O_CLOEXEC],
+    EPOLLIN: [0x00000001],
+    EPOLLPRI: [0x00000002],
+    EPOLLOUT: [0x00000004],
+    EPOLLERR: [0x00000008],
+    EPOLLHUP: [0x00000010],
+    EPOLLNVAL: [0x00000020],
+    EPOLLRDNORM: [0x00000040],
+    EPOLLRDBAND: [0x00000080],
+    EPOLLWRNORM: [0x00000100],
+    EPOLLWRBAND: [0x00000200],
+    EPOLLMSG: [0x00000400],
+    EPOLLRDHUP: [0x00002000],
+    EPOLLEXCLUSIVE: [1 << 28],
+    EPOLLWAKEUP: [1 << 29],
+    EPOLLONESHOT: [1 << 30],
+    EPOLLET: [1 << 31],
+}
+
 export const AF_ = {
     AF_UNSPEC: [0],
     AF_UNIX: [1],
@@ -604,6 +663,20 @@ export const S = {
     SIGSTKSZ: [8192],
 };
 
+export const IOPRIO_WHO =  {
+    IOPRIO_WHO_PROCESS: [1],
+    IOPRIO_WHO_PGRP: [2],
+    IOPRIO_WHO_USER: [3],
+};
+
+export const IOPRIO_CLASS =  {
+    IOPRIO_CLASS_NONE: [0],
+    IOPRIO_CLASS_RT: [1],
+    IOPRIO_CLASS_BE: [2],
+    IOPRIO_CLASS_IDLE: [3],
+};
+
+
 export const SEEK_ = {
     SEEK_SET: [0],
     SEEK_CUR: [1],
@@ -628,6 +701,16 @@ export const SCHED_ = {
     SCHED_FLAG_UTIL_CLAMP_MIN: [0x20],
     SCHED_FLAG_UTIL_CLAMP_MAX: [0x40]
 }
+export const LOCK = {
+	LOCK_SH: [1],
+	LOCK_EX: [2],
+	LOCK_NB: [4],
+	LOCK_UN: [8],
+	LOCK_MAND: [32],
+	LOCK_READ: [64],
+	LOCK_WRITE: [128],
+	LOCK_RW: [192]
+};
 
 //
 export const E = {
@@ -790,6 +873,17 @@ export const X = {
             AT_EMPTY_PATH: [0x1000]
         });
     },
+    EPOLL_EV: function(f){
+        return stringifyBitmap(f, EPOLL_EV);
+    },
+    EPOLL_CTL: function(f){
+        return stringifyBitmap(f, EPOLL_CTL);
+    },
+    EPOLL_FLAG: function(f){
+        return stringifyBitmap(f, {
+            EPOLL_CLOEXEC: [O_.O_CLOEXEC]
+        });
+    },
     PRCTL_OPT: function(f){
         return l(f,PR_.OPT);
     },
@@ -802,17 +896,50 @@ export const X = {
     SEEK: function(f){
         return l(f,SEEK_);
     },
+    INOTIFY_FLAGS: function(f){
+        return l(f,INOTIFY_FLAGS);
+    },
+    INOTIFY_MASK: function(f){
+        return l(f,INOTIFY_MASK);
+    },
     FUTEX_OPE: function(f){
         return l(f,FUTEX);
     },
     PTRACE: function(f){
         return l(f,PTRACE_);
     },
+    NODMODE: function(f, dev){
+        // todo parse dev
+        return stringifyBitmapArr(f, {
+            S_IFREG: S_.S_IFREG,
+            S_IFCHR: S_.S_IFCHR,
+            S_IFBLK: S_.S_IFBLK,
+            S_IFIFO: S_.S_IFIFO,
+            S_IFSOCK: S_.S_IFSOCK
+        });
+    },
+    FLOCK: function(f){
+        return l(f,LOCK);
+    },
+    IOPRIO_WHICH: function(f, cmd){
+        console.error(f, cmd);
+        switch(f){
+            case IOPRIO_WHO.IOPRIO_WHO_PROCESS:
+            case IOPRIO_WHO.IOPRIO_WHO_PGRP:
+            case IOPRIO_WHO.IOPRIO_WHO_USER:
+            default:
+                return f;
+                break;
+        }
+    },
     TYPEID: function(f){
         return l(f,K);
     },
     XATTR: function(f){
         return ["default","XATTR_CREATE","XATTR_REPLACE"][f];
+    },
+    UNLINK: function(f){
+        return l(f,{AT_REMOVEDIR:AT_.AT_REMOVEDIR});
     },
     FNCTL: function(f){
         return l(f,F_);
