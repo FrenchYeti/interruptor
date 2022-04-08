@@ -941,6 +941,9 @@ export const X = {
     UNLINK: function(f){
         return l(f,{AT_REMOVEDIR:AT_.AT_REMOVEDIR});
     },
+    PIPE_FLAG: function(f){
+        return stringifyBitmapArr(f,{O_NONBLOCK:O_.O_NONBLOCK,O_CLOEXEC :O_.O_CLOEXEC});
+    },
     FNCTL: function(f){
         return l(f,F_);
     },
