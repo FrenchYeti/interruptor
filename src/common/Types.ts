@@ -26,7 +26,9 @@ export enum L {
     DEV, // Device
     DSTRUCT,
     EPFD, // EPoll File Descriptor
-    WD// Watch Descriptor
+    WD,// Watch Descriptor,
+    PIPEFD, // fd[2] read FD, write FD
+    SOCKFD
 }
 
 export enum T {
