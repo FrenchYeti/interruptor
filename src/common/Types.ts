@@ -28,7 +28,9 @@ export enum L {
     EPFD, // EPoll File Descriptor
     WD,// Watch Descriptor,
     PIPEFD, // fd[2] read FD, write FD
-    SOCKFD
+    SOCKFD,
+    BUFFER,
+    PKEY
 }
 
 export enum T {
