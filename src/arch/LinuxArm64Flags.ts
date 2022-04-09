@@ -250,7 +250,9 @@ export const MADV_ = {
     MADV_COLD: [20],
     MADV_PAGEOUT: [21]
 };
-
+export const MLOCK = {
+    MLOCK_ONFAULT: [1]
+};
 export const PR_ = {
     OPT: {
         PR_CAP_AMBIENT: [47],
@@ -663,7 +665,52 @@ export const S = {
     SIGSTKSZ: [8192],
 };
 
+export const MOUNT = {
+	MS_RDONLY: [1], /* Mount read-only */
+	MS_NOSUID: [2], /* Ignore suid and sgid bits */
+	MS_NODEV: [4], /* Disallow access to device special files */
+	MS_NOEXEC: [8], /* Disallow program execution */
+	MS_SYNCHRONOUS: [16], /* Writes are synced at once */
+	MS_REMOUNT: [32], /* Alter flags of a mounted FS */
+	MS_MANDLOCK: [64], /* Allow mandatory locks on an FS */
+	MS_DIRSYNC: [128], /* Directory modifications are synchronous */
+	MS_NOSYMFOLLOW: [256], /* Do not follow symlinks */
+	MS_NOATIME: [1024], /* Do not update access times. */
+	MS_NODIRATIME: [2048], /* Do not update directory access times */
+    MS_BIND:		[4096],
+    MS_MOVE:		[8192],
+    MS_REC:		[16384],
+	// MS_VERBOSE: [32768], /* War is peace. Verbosity is silence. MS_VERBOSE is deprecated. */
+    MS_SILENT:	[32768],
+	MS_POSIXACL: [(1<<16)], /* VFS does not apply the umask */
+	MS_UNBINDABLE: [(1<<17)], /* change to unbindable */
+	MS_PRIVATE: [(1<<18)], /* change to private */
+	MS_SLAVE: [(1<<19)], /* change to slave */
+	MS_SHARED: [(1<<20)], /* change to shared */
+	MS_RELATIME: [(1<<21)], /* Update atime relative to mtime/ctime. */
+	MS_KERNMOUNT: [(1<<22)], /* this is a kern_mount call */
+	MS_I_VERSION: [(1<<23)], /* Update inode I_version field */
+	MS_STRICTATIME: [(1<<24)], /* Always perform atime updates */
+	MS_LAZYTIME: [(1<<25)] /* Update the on-disk [acm]times lazily */
+}
+export const MEMBARRIER_FLAG = {
+    MEMBARRIER_CMD_FLAG_CPU: [(1 << 0)]
+}
+export const MEMBARRIER_CMD = {
+    MEMBARRIER_CMD_QUERY: [0],
+    MEMBARRIER_CMD_GLOBAL: [(1 << 0)],
+    MEMBARRIER_CMD_GLOBAL_EXPEDITED: [(1 << 1)],
+    MEMBARRIER_CMD_REGISTER_GLOBAL_EXPEDITED: [(1 << 2)],
+    MEMBARRIER_CMD_PRIVATE_EXPEDITED: [(1 << 3)],
+    MEMBARRIER_CMD_REGISTER_PRIVATE_EXPEDITED: [(1 << 4)],
+    MEMBARRIER_CMD_PRIVATE_EXPEDITED_SYNC_CORE: [(1 << 5)],
+    MEMBARRIER_CMD_REGISTER_PRIVATE_EXPEDITED_SYNC_CORE: [(1 << 6)],
+    MEMBARRIER_CMD_PRIVATE_EXPEDITED_RSEQ: [(1 << 7)],
+    MEMBARRIER_CMD_REGISTER_PRIVATE_EXPEDITED_RSEQ: [(1 << 8)],
+    MEMBARRIER_CMD_SHARED: [(1 << 0)] // MEMBARRIER_CMD_GLOBAL
+}
 export const IOPRIO_WHO =  {
+    NULL: [0],
     IOPRIO_WHO_PROCESS: [1],
     IOPRIO_WHO_PGRP: [2],
     IOPRIO_WHO_USER: [3],
@@ -700,7 +747,16 @@ export const SCHED_ = {
     SCHED_FLAG_KEEP_PARAMS: [0x10],
     SCHED_FLAG_UTIL_CLAMP_MIN: [0x20],
     SCHED_FLAG_UTIL_CLAMP_MAX: [0x40]
-}
+};
+
+export const RWF = {
+    RWF_HIPRI: [0x00000001],
+    RWF_DSYNC: [0x00000002],
+    RWF_SYNC: [0x00000004],
+    RWF_NOWAIT: [0x00000008],
+    RWF_APPEND: [0x00000010]
+};
+
 export const LOCK = {
 	LOCK_SH: [1],
 	LOCK_EX: [2],
@@ -710,6 +766,19 @@ export const LOCK = {
 	LOCK_READ: [64],
 	LOCK_WRITE: [128],
 	LOCK_RW: [192]
+};
+export const FALLOC = {
+	FALLOC_FL_KEEP_SIZE: [0x01],
+	FALLOC_FL_PUNCH_HOLE: [0x02],
+	FALLOC_FL_NO_HIDE_STALE: [0x04],
+	FALLOC_FL_COLLAPSE_RANGE: [0x08],
+	FALLOC_FL_ZERO_RANGE: [0x10],
+	FALLOC_FL_INSERT_RANGE: [0x20],
+	FALLOC_FL_UNSHARE_RANGE: [0x40],
+};
+export const PKEY = {
+    PKEY_DISABLE_ACCESS:	[0x1],
+    PKEY_DISABLE_WRITE:	[0x2]
 };
 
 //
@@ -866,6 +935,24 @@ export const X = {
         else
             return  0; // no flag
     },
+    MLOCK: function(f){
+        if(f == MLOCK.MLOCK_ONFAULT)
+            return "MLOCK_ONFAULT";
+        else
+            return  0; // no flag
+    },
+    PKEY_ACL: function(f){
+        return l(f,PKEY);
+    },
+    RWF: function(f){
+        return l(f,RWF);
+    },
+    MEMBARRIER_CMD: function(f){
+        return l(f,MEMBARRIER_CMD);
+    },
+    MEMBARRIER_FLAG: function(f){
+        return l(f,MEMBARRIER_FLAG);
+    },
     ACCESS_FLAGS: function(f){
         return stringifyBitmap(f, {
             AT_SYMLINK_NOFOLLOW: [0x100],
@@ -921,8 +1008,12 @@ export const X = {
     FLOCK: function(f){
         return l(f,LOCK);
     },
+    FALLOC: function(f){
+        return l(f,FALLOC);
+    },
     IOPRIO_WHICH: function(f, cmd){
-        console.error(f, cmd);
+        return l(f, IOPRIO_WHO);
+        /*console.error(f, cmd);
         switch(f){
             case IOPRIO_WHO.IOPRIO_WHO_PROCESS:
             case IOPRIO_WHO.IOPRIO_WHO_PGRP:
@@ -930,7 +1021,7 @@ export const X = {
             default:
                 return f;
                 break;
-        }
+        }*/
     },
     TYPEID: function(f){
         return l(f,K);
@@ -973,6 +1064,9 @@ export const X = {
     },
     SOCK: function(f){
         return stringifyBitmap(f,SOCK_);
+    },
+    MOUNT_FLAG: function(f){
+        return stringifyBitmapArr(f,MOUNT);
     },
     MADV: function(f){
         return l(f,MADV_);
