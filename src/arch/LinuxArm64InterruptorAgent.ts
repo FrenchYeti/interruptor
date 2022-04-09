@@ -51,6 +51,7 @@ const A = {
     OLD_DFD: _({t: T.INT32, n:"old_dfd", l:L.DFD}),
     NEW_DFD: _({t: T.INT32, n:"new_dfd", l:L.DFD}),
     FD: _({t:T.UINT32, n:"fd", l:L.FD}),
+    FD_SET: _({t:T.POINTER64, n:"fd_set*", l:L.BUFFER, f:"FD" }),
     SOCKFD: _({t:T.UINT32, n:"sockfd", l:L.SOCKFD}),
     EPFD: _({t:T.UINT32, n:"epfd", l:L.EPFD}),
     AIO: _({t:T.ULONG, n:"aio_context_t ctx_id"}),
@@ -64,6 +65,7 @@ const A = {
     SIZE: _({t:T.UINT32, n:"size", l:L.SIZE}),
     LEN: _({t:T.ULONG, n:"length", l:L.SIZE}),
     OFFSET: _({t:T.UINT32, n:"offset", l:L.SIZE}),
+    LOFFSET: _({t:T.ULONG, n:"offset", l:L.SIZE}),
     SIGNED_LEN: _({t:T.LONG, n:"length", l:L.SIZE}),
     XATTR: _({t:T.INT32, n:"flags", l:L.FLAG, f:X.XATTR }),
     XATTR_LIST: _({t:T.CHAR_BUFFER, n:"list", l:L.XATTR_LIST, r:2}),
@@ -86,7 +88,10 @@ const A = {
     OUTPUT_CHAR_BUFFER: _({t:T.POINTER64, n:"buf", l:L.OUTPUT_BUFFER}),
     OUTPUT_BUFFER_LEN: _({t:T.INT32, n:"size", l:L.SIZE}),
     IOPRIO_WHICH: _({ t:T.INT32, n:"which", l:L.FLAG, r:"x1", f:X.IOPRIO_WHICH }),
-    IOVEC: _({t:T.POINTER64, n:"*iovec", l:L.DSTRUCT, f:DSTRUCTS.iovec, c:true})
+    IOVEC: _({t:T.POINTER64, n:"*iovec", l:L.DSTRUCT, f:DSTRUCTS.iovec, c:true}),
+    ACCESS_FLAGS: _({t:T.INT32, n:"flag", l:L.FLAG, f:X.ACCESS_FLAGS}),
+    PKEY: _({ t:T.INT32, n:"pkey", l:L.PKEY}),
+    RWF: _({t:T.INT32, n:"rwf", l:L.FLAG, f:X.RWF})
 }
 
 const RET:any = {
@@ -148,51 +153,51 @@ const SVC = [
     [37,"linkat",0x25,[A.OLD_DFD,{t:T.POINTER64, n:"value"},A.NEW_DFD,{t:T.POINTER64, n:"value"}, {t:T.UINT32, n:"flags", l:L.FLAG, f:X.LINKAT}],RET.LINKAT],
     [38,"renameat",0x26,[A.OLD_DFD,A.CONST_NAME.copy("oldname"),A.NEW_DFD,A.CONST_NAME.copy("newname")]],
     [39,"umount2",0x27,[A.CONST_PATH /* target */,{t:T.INT32, n:"flags", l:L.FLAG, f:X.UMOUNT, c:true}]],
-    [40,"mount",0x28,[ A.STR.copy("dev_name"), A.STR.copy("dir_name"), A.STR.copy("type"),"unsigned long flags","void *dat"]],
+    [40,"mount",0x28,[ A.STR.copy("dev_name"), A.STR.copy("dir_name"), A.STR.copy("type"),{t:T.ULONG, n:"flags", l:L.FLAG, f:X.MOUNT_FLAG},{t:T.POINTER64, n:"*dat"}]],
     [41,"pivot_root",0x29,[A.CONST_NAME.copy("new_root"),A.CONST_NAME.copy("put_old")]],
     [42,"nfsservctl",0x2a,["int cmd", "struct nfsctl_arg *argp","union nfsctl_res *resp"]],
     [43,"statfs",0x2b,[A.CONST_PATH,"struct statfs *buf"]],
     [44,"fstatfs",0x2c,[A.FD,"struct statfs *buf"]],
     [45,"truncate",0x2d,[A.CONST_PATH, A.SIGNED_LEN]],
     [46,"ftruncate",0x2e,[A.FD,A.LEN],RET.OPEN /* similar to open() */],
-    [47,"fallocate",0x2f,[A.FD,"int mode","loff_t offset","loff_t len"]],
+    [47,"fallocate",0x2f,[A.FD,{t:T.INT32, n:"mode", l:L.FLAG, f:X.FALLOC},A.LOFFSET,A.LEN]],
     [48,"faccessat",0x30,[A.DFD,A.CONST_FNAME,A.FMODE],RET.ACCESS],
     [49,"chdir",0x31,[{t:T.CHAR_BUFFER, n:"path", l:L.PATH, c:true}]],
     [50,"fchdir",0x32,[A.FD],{t:T.INT32, e:[E.EACCES,E.EFAULT,E.EIO,E.ELOOP,E.ENAMETOOLONG,E.ENOENT,E.ENOMEM,E.ENOTDIR,E.EPERM,E.EBADF]}],
     [51,"chroot",0x33,[{t:T.CHAR_BUFFER, n:"path", l:L.PATH, c:true}],{t:T.INT32, e:[E.EACCES,E.EFAULT,E.EIO,E.ELOOP,E.ENAMETOOLONG,E.ENOENT,E.ENOMEM,E.ENOTDIR,E.EPERM]}],
     [52,"fchmod",0x34,[A.FD,{t:T.USHORT, n:"mode", l:L.ATTRMODE, f:X.ATTR}],{t:T.INT32, e:[E.EACCES,E.EFAULT,E.EIO,E.ELOOP,E.ENAMETOOLONG,E.ENOENT,E.ENOMEM,E.ENOTDIR,E.EPERM,E.EBADF,E.EROFS]}],
-    [53,"fchmodat",0x35,[A.DFD,A.CONST_PATH,"umode_t mode"]],
-    [54,"fchownat",0x36,[A.DFD,A.CONST_PATH,A.UID,A.GID,"int fla"]],
+    [53,"fchmodat",0x35,[A.DFD,A.CONST_PATH,A.FMODE]],
+    [54,"fchownat",0x36,[A.DFD,A.CONST_PATH,A.UID,A.GID,A.ACCESS_FLAGS]],
     [55,"fchown",0x37,[A.FD,A.UID,A.GID]],
     [56,"openat",0x38,[A.DFD, A.CONST_FNAME,{t:T.UINT32, n:"flags", l:L.FLAG, f:X.O_MODE},{t:T.UINT32, n:"mode", l:L.FLAG, f:X.UMASK}],RET.OPENAT],
     [57,"close",0x39,[A.FD]],
     [58,"vhangup",0x3a,[]],
     [59,"pipe2",0x3b,[{t:T.POINTER64, n:"pipefd", l:L.PIPEFD},{t:T.INT32, n:"flags", l:L.FLAG, f:X.PIPE_FLAG}]],
     [60,"quotactl",0x3c,["unsigned int cmd",A.CONST_NAME.copy("special"),"qid_t id","void *addr"]],
-    [61,"getdents64",0x3d,[{t:T.UINT32, n:"fd", l:L.FD},"struct linux_dirent64 *dirent","unsigned int count"]],
+    [61,"getdents64",0x3d,[{t:T.UINT32, n:"fd", l:L.FD},"struct linux_dirent64 *dirent",A.SIZE]],
     [62,"lseek",0x3e,[A.FD,A.OFFSET,{t:T.UINT32, n:"whence", l:L.FLAG, f:X.SEEK}]],
     [63,"read",0x3f,[A.FD, A.OUTPUT_CHAR_BUFFER, {t:T.UINT32, n:"count", l:L.SIZE}], {t:T.UINT32, r:1, n:"sz", l:L.SIZE}],
     [64,"write",0x40,[A.FD,{t:T.CHAR_BUFFER, n:"buf", c:true},A.SIZE]],
-    [65,"readv",0x41,[A.LFD,A.IOVEC,A.LEN]],
-    [66,"writev",0x42,[A.LFD,A.IOVEC,A.LEN]],
+    [65,"readv",0x41,[A.FD,A.IOVEC,A.LEN]],
+    [66,"writev",0x42,[A.FD,A.IOVEC,A.LEN]],
     [67,"pread64",0x43,[A.FD,A.OUTPUT_CHAR_BUFFER,A.SIZE,A.OFFSET]],
     [68,"pwrite64",0x44,[A.FD,"const char *buf",A.SIZE,A.OFFSET]],
-    [69,"preadv",0x45,[A.LFD,A.IOVEC,A.LEN,"unsigned long pos_l","unsigned long pos_"]],
-    [70,"pwritev",0x46,[A.LFD,A.IOVEC,A.LEN,"unsigned long pos_l","unsigned long pos_"]],
-    [71,"sendfile",0x47,[{t:T.UINT32, n:"out_fd", l:L.FD},{t:T.UINT32, n:"in_fd", l:L.FD},"off_t *offset","size_t count"]],
-    [72,"pselect6",0x48,["int","fd_set *","fd_set *","fd_set *","struct __kernel_timespec *","void *["]],
+    [69,"preadv",0x45,[A.FD,A.IOVEC,A.SIZE.copy('iovcnt'),A.LOFFSET]],
+    [70,"pwritev",0x46,[A.FD,A.IOVEC,A.SIZE.copy('iovcnt'),A.LOFFSET]],
+    [71,"sendfile",0x47,[A.FD.copy("out_fd"),A.FD.copy("in_fd"),A.OFFSET,A.SIZE]],
+    [72,"pselect6",0x48,[{t:T.INT32, n:"nfds"},A.FD_SET.copy("readfds"),A.FD_SET.copy("writefds"),A.FD_SET.copy("exceptfds"),"struct __kernel_timespec *","const sigset_t *sigmask"]],
     [73,"ppoll",0x49,["struct pollfd *","unsigned int","struct __kernel_timespec *","const sigset_t *","size_"]],
     [74,"signalfd4",0x4a,["int ufd","sigset_t *user_mask","size_t sizemask","int flags"]],
     [75,"vmsplice",0x4b,[A.FD,A.IOVEC,"unsigned long nr_segs","unsigned int flags"]],
     [76,"splice",0x4c,[{t:T.UINT32, n:"fd_in", l:L.FD},"loff_t *off_in",{t:T.UINT32, n:"fd_out", l:L.FD},"loff_t *off_out","size_t len","unsigned int flags["]],
     [77,"tee",0x4d,[{t:T.UINT32, n:"fd_in", l:L.FD},{t:T.UINT32, n:"fd_out", l:L.FD},"size_t len","unsigned int flags"]],
     [78,"readlinkat",0x4e,[A.DFD, {t:T.STRING, n:"path", l:L.PATH, c:true},A.OUTPUT_CHAR_BUFFER,A.SIZE]],
-    [79,"newfstatat",0x4f,[A.DFD,{t:T.STRING, n:"filename", c:true},{t:T.POINTER64, n:"struct stat *statbuf"}, {t:T.UINT32, n:"flags", l:L.FLAG, f:X.ACCESS_FLAGS}],RET.ACCESS],
+    [79,"newfstatat",0x4f,[A.DFD,{t:T.STRING, n:"filename", c:true},{t:T.POINTER64, n:"struct stat *statbuf"}, A.ACCESS_FLAGS],RET.ACCESS],
     [80,"fstat",0x50,[{t:T.UINT32, n:"fd", l:L.FD},{t:T.POINTER64, n:"*statbuf", l:L.DSTRUCT, f:DSTRUCTS.__old_kernel_stat}]],
     [81,"sync",0x51,[]],
     [82,"fsync",0x52,[A.FD]],
     [83,"fdatasync",0x53,[A.FD]],
-    [84,"sync_file_range",0x54,[A.FD,"loff_t offset","loff_t nbytes","unsigned int flags"]],
+    [84,"sync_file_range",0x54,[A.FD,A.LOFFSET,A.LEN.copy('nbytes'),"unsigned int flags"]],
     [85,"timerfd_create",0x55,["int clockid","int flags"]],
     [86,"timerfd_settime",0x56,["int ufd","int flags","const struct __kernel_itimerspec *utmr","struct __kernel_itimerspec *otmr"]],
     [87,"timerfd_gettime",0x57,["int ufd","struct __kernel_itimerspec *otmr"]],
@@ -342,7 +347,7 @@ const SVC = [
     [231,"munlockall",0xe7,[],{t:T.INT32, e:[E.EPERM,E.EINVAL,E.ENOMEM]}],
     [232,"mincore",0xe8,[A.ADDR,A.SIZE,"unsigned char * vec"]],
     [233,"madvise",0xe9,[A.ADDR,A.SIZE, {t:T.INT32, n:"behavior", l:L.FLAG, f:X.MADV}],{ t:T.INT32, e:[E.EAGAIN,E.EBADF,E.EINVAL,E.EIO, E.ENOMEM]}],
-    [234,"remap_file_pages",0xea,["unsigned long start","unsigned long size","unsigned long prot","unsigned long pgoff","unsigned long flags"]],
+    [234,"remap_file_pages",0xea,[A.START_ADDR,A.LEN,"unsigned long prot","unsigned long pgoff","unsigned long flags"]],
     [235,"mbind",0xeb,[A.ADDR,A.LEN,"unsigned long mode","const unsigned long *nmask","unsigned long maxnode","unsigned flags"]],
     [236,"get_mempolicy",0xec,["int *policy","unsigned long *nmask","unsigned long maxnode","unsigned long addr","unsigned long flags"]],
     [237,"set_mempolicy",0xed,["int mode","const unsigned long *nmask","unsigned long maxnode"]],
@@ -391,15 +396,15 @@ const SVC = [
     [280,"bpf",0x118,["int cmd","union bpf_attr *attr","unsigned int size"]],
     [281,"execveat",0x119,[{t:T.INT32, n:"dfd", l:L.DFD},{t:T.STRING, n:"filename", c:true},A.CONST_NAME.copy("*argv"),A.CONST_NAME.copy("*envp"),"int flags"]],
     [282,"userfaultfd",0x11a,[ {t:T.UINT32, n:"flags", l:L.FLAG, f:X.O_MODE }]],
-    [283,"membarrier",0x11b,["int cmd","int flags"]],
-    [284,"mlock2",0x11c,["unsigned long start",A.SIZE,"int flags"]],
-    [285,"copy_file_range",0x11d,[{t:T.UINT32, n:"fd_in", l:L.FD},"loff_t *off_in",{t:T.UINT32, n:"fd_out", l:L.FD},"loff_t *off_out",A.SIZE,"unsigned int flags"]],
-    [286,"preadv2",0x11e,[A.LFD,A.IOVEC,A.LEN,"unsigned long pos_l","unsigned long pos_h","rwf_t flags"]],
-    [287,"pwritev2",0x11f,[A.LFD,A.IOVEC,A.LEN,"unsigned long pos_l","unsigned long pos_h","rwf_t flags"]],
-    [288,"pkey_mprotect",0x120,[A.ADDR,A.SIZE,"unsigned long prot","int pkey"]],
-    [289,"pkey_alloc",0x121,["unsigned long flags","unsigned long init_val"]],
-    [290,"pkey_free",0x122,["int pkey"]],
-    [291,"statx",0x123,[A.DFD, A.CONST_PATH,"unsigned flags","unsigned mask","struct statx *buffer"]]
+    [283,"membarrier",0x11b,[{t:T.INT32, n:"cmd", l:L.FLAG, f:X.MEMBARRIER_CMD}, {t:T.INT32, n:"glag", l:L.FLAG, f:X.MEMBARRIER_FLAG}]],
+    [284,"mlock2",0x11c,[A.START_ADDR,A.SIZE,{t:T.UINT32, n:"flags", l:L.FLAG, f:X.MLOCK }]],
+    [285,"copy_file_range",0x11d,[{t:T.UINT32, n:"fd_in", l:L.FD},A.LOFFSET.copy('*off_in'),{t:T.UINT32, n:"fd_out", l:L.FD},A.LOFFSET.copy('*off_out'),A.SIZE,"unsigned int RESERVED flags"]],
+    [286,"preadv2",0x11e,[A.LFD,A.IOVEC,A.LEN,A.LOFFSET,A.RWF]],
+    [287,"pwritev2",0x11f,[A.LFD,A.IOVEC,A.LEN,A.LOFFSET,A.RWF]],
+    [288,"pkey_mprotect",0x120,[A.ADDR,A.SIZE,A.MPROT,A.PKEY]],
+    [289,"pkey_alloc",0x121,["unsigned long RESERVED flags",{t:T.ULONG, n:"access_rights", l:L.FLAG, f:X.PKEY_ACL }],A.PKEY],
+    [290,"pkey_free",0x122,[A.PKEY]],
+    [291,"statx",0x123,[A.DFD, A.CONST_PATH,A.ACCESS_FLAGS,"unsigned mask","struct statx *buffer"]]
     ];
 
 const SVC_MAP_NUM:any = {};
@@ -649,11 +654,11 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
      * @param pPointer
      * @method
      */
-    parseStruct( pContext:any, pFormat:any[], pPointer:NativePointer, pAlign:boolean = false):string {
+    parseStruct( pContext:any, pFormat:any[], pPointer:NativePointer, pSeparator:string ="\n", pAlign:boolean = false):string {
 
-        let msg:string = " {\n", fmt:any = null, v:string = "", val:any = null;
+        let msg:string = " {"+pSeparator, fmt:any = null, v:string = "", val:any = null;
         let offset:number =0;
-        console.log(hexdump(pPointer,{length:128}));
+        //console.log(hexdump(pPointer,{length:128}));
         for(let i=0; i<pFormat.length; i++){
             fmt = pFormat[i];
             switch(fmt.t){
@@ -681,12 +686,17 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                     val = pPointer.add(offset).readULong();
                     offset += 8;
                     break;
+                case T.POINTER64:
+                    val = pPointer.add(offset).readULong();
+                    offset += 8;
+                    break;
 
             }
             v = this.parseValue( pContext, val, fmt, i);
-            msg += ` \t${fmt.n} = ${v},\n`;
+            msg += ` \t${fmt.n} = ${v},${pSeparator}`;
         }
-        return msg+" \n}";
+
+        return msg+pSeparator+" }";
     }
 
     /**
@@ -721,7 +731,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                      */
                     t = rVal.toInt32();
                     if (t >= 0)
-                        p += `${t}  ${pContext.dxcFD[rVal.toInt32() + ""]}  `;
+                        p += `${t}  ${pContext.dxc.FD[rVal.toInt32() + ""]}  `;
                     else if ((t & MAP_.MAP_ANONYMOUS[0]) == MAP_.MAP_ANONYMOUS[0])
                         p += `${t} IGNORED  `
                     else
@@ -730,10 +740,22 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                 case L.FD:
                     t = rVal.toInt32();
                     if (t >= 0)
-                        p += `${t}  ${pContext.dxcFD[t + ""]}  `;
+                        p += `${t}  ${pContext.dxc.FD[t + ""]}  `;
                     else if (t == AT_.AT_FDCWD)
                         p += "AT_FDCWD "
                     else
+                        p += rVal + " ";
+                    break;
+                case L.SOCKFD:
+                    t = rVal.toInt32();
+                    if (t >= 0)
+                        p += `${t}  ${pContext.dxc.SOCKFD[t + ""]}  `;
+                    p += rVal + " ";
+                    break;
+                case L.WD:
+                    t = rVal.toInt32();
+                    if (t >= 0)
+                        p += `${t}  ${pContext.dxc.WD[t + ""]}  `;
                         p += rVal + " ";
                     break;
                 case L.VADDR:
@@ -756,12 +778,12 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                     pContext.dxcOpts[pIndex] = rVal;
                     break;
                 case L.DSTRUCT:
-                    // if (pContext.dxcOpts._extra == null) pContext.dxcOpts._extra = [];
+                    if (pContext.dxcOpts._extra == null) pContext.dxcOpts._extra = [];
                     pFormat.r = pIndex;
                     pFormat.v = rVal;
-                    // pContext.dxcOpts._extra.push(pFormat);
-                    p += `${rVal}`
-                    //pContext.dxcOpts[vOff] = rVal;
+                    pContext.dxcOpts._extra.push(pFormat);
+                    p += `${rVal} ${pFormat.c ? this.parseStruct( pContext, pFormat.f, pFormat.v, "" ) : ""}`
+                    pContext.dxcOpts[pIndex] = rVal;
                     break;
                 default:
                     switch (pFormat.t) {
@@ -864,9 +886,34 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                 case L.DFD:
                 case L.FD:
                     if(pContext.x0.toInt32() >= 0){
-                        if(pContext.dxcFD==null) pContext.dxcFD = {};
-                        pContext.dxcFD[ pContext.x0.toInt32()+""] = pContext.dxcOpts[ret.r];
+                        if(pContext.dxc==null){
+                            pContext.dxc = {FD:{}};
+                            pContext.dxcFD = pContext.dxc.FD = {};
+                        }
+                        pContext.dxc.FD[ pContext.x0.toInt32()+""] = pContext.dxcOpts[ret.r];
                         ret = "("+(L.DFD==ret.l?"D":"")+"FD) "+pContext.x0;
+                    }else if(ret.e){
+                        let err = this.getSyscallError(pContext.x0.toInt32(), ret.e);
+                        ret = "(ERROR) "+err+" "  ;
+                    }else{
+                        ret = "(ERROR) "+pContext.x0;
+                    }
+
+                    break;
+                case L.SOCKFD:
+                    if(pContext.x0.toInt32() >= 0){
+                        pContext.dxc.SOCKFD[ pContext.x0.toInt32()+""] = pContext.dxcOpts["x1"]+","+pContext.dxcOpts["x2"];
+                        ret = "(SOCKFD) "+pContext.x0;
+                    }else if(ret.e){
+                        let err = this.getSyscallError(pContext.x0.toInt32(), ret.e);
+                        ret = "(ERROR) "+err+" "  ;
+                    }else{
+                        ret = "(ERROR) "+pContext.x0;
+                    }
+                case L.WD:
+                    if(pContext.x0.toInt32() >= 0){
+                        pContext.dxc.WD[ pContext.x0.toInt32()+""] = pContext.dxcOpts[ret.r];
+                        ret = "(WD) "+pContext.x0;
                     }else if(ret.e){
                         let err = this.getSyscallError(pContext.x0.toInt32(), ret.e);
                         ret = "(ERROR) "+err+" "  ;
@@ -905,10 +952,10 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
            ret = pContext.x0;
         }
 
-        console.log( pContext.log +'   > '+ret);
+        console.log( pContext.log +'   > '+ret);0
 
         // to process extra data such as structured data edited or passed as args
-        if(pContext.dxcOpts._extra){
+        if(pContext.dxcOpts != null && pContext.dxcOpts._extra){
             pContext.dxcOpts._extra.map( x => {
                 if(x.v != null)
                     // if the pointer has been saved before to call the syscall, then it uses saved value
@@ -932,7 +979,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
 
             pStalkerInterator.putCallout(function(context) {
                 const n = context.x8.toInt32();
-
+                if(context.dxc==null) context.dxc = {FD:{}};
                 if(isExcludedFn!=null && isExcludedFn(n)) return;
 
                 self.traceSyscallRet(context);
@@ -961,7 +1008,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
 
                 if(isExcludedFn!=null && isExcludedFn(n)) return;
 
-                if(context.dxcFD==null) context.dxcFD = {};
+                if(context.dxc.FD==null) context.dxc = {FD:{}};
                 const hook = self.svc_hk[n];
 
 
