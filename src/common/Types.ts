@@ -1,3 +1,4 @@
+import {IDSTRUCTS} from "../arch/LinuxArm64InterruptorAgent";
 
 export enum L {
     PATH,
@@ -30,7 +31,11 @@ export enum L {
     PIPEFD, // fd[2] read FD, write FD
     SOCKFD,
     BUFFER,
-    PKEY
+    PKEY,
+    IDSTRUCT,
+    FUTEX,
+    TIMER,
+    MQDES// struct always parsed,
 }
 
 export enum T {
