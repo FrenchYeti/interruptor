@@ -69,6 +69,27 @@ export const INOTIFY_MASK = {
 	IN_ONESHOT: [0x80000000]
 };
 
+export const RES = {
+    RLIMIT_CPU: [0],
+    RLIMIT_FSIZE: [1],
+    RLIMIT_DATA: [2],
+    RLIMIT_STACK: [3],
+    RLIMIT_CORE: [4],
+    RLIMIT_RSS: [5],
+    RLIMIT_NPROC: [6],
+    RLIMIT_NOFILE: [7],
+    RLIMIT_MEMLOCK: [8],
+    RLIMIT_AS: [9],
+    RLIMIT_LOCKS: [10],
+    RLIMIT_SIGPENDING: [11],
+    RLIMIT_MSGQUEUE: [12],
+    RLIMIT_NICE: [13],
+    RLIMIT_RTPRIO: [14],
+    RLIMIT_RTTIME: [15],
+    RLIM_NLIMITS: [16],
+    RLIM_INFINITY: [(~0) & 0xffffffffffffffff]
+};
+
 export const EPOLL_CTL = {
     EPOLL_CTL_ADD: [1],
     EPOLL_CTL_DEL: [2],
@@ -94,7 +115,17 @@ export const EPOLL_EV = {
     EPOLLONESHOT: [1 << 30],
     EPOLLET: [1 << 31],
 }
-
+export const SPLICE = {
+    SPLICE_F_MOVE: [1],
+    SPLICE_F_NONBLOCK: [2],
+    SPLICE_F_MORE: [4],
+    SPLICE_F_GIFT: [8]
+};
+export const SYNC_FILE = {
+    SYNC_FILE_RANGE_WAIT_BEFORE: [1],
+    SYNC_FILE_RANGE_WRITE: [2],
+    SYNC_FILE_RANGE_WAIT_AFTER: [4]
+};
 export const AF_ = {
     AF_UNSPEC: [0],
     AF_UNIX: [1],
@@ -141,7 +172,6 @@ export const AF_ = {
     AF_QIPCRTR: [42],
     AF_MAX: [43]
 };
-
 export const SOCK_ = {
     SOCK_STREAM: [1],
     SOCK_DGRAM: [2],
@@ -153,7 +183,6 @@ export const SOCK_ = {
     SOCK_CLOEXEC: [O_.O_CLOEXEC],
     SOCK_NONBLOCK: [O_.O_NONBLOCK]
 };
-
 export const PF_ = {
     PF_UNSPEC: [AF_.AF_UNSPEC[0]],
     PF_UNIX: [AF_.AF_UNIX[0]],
@@ -200,7 +229,6 @@ export const PF_ = {
     PF_QIPCRTR: [AF_.AF_QIPCRTR[0]],
     PF_MAX: [AF_.AF_MAX[0]]
 };
-
 export const PTRACE_ = {
     PTRACE_TRACEME: [0],
     PTRACE_PEEKTEXT: [1],
@@ -494,7 +522,15 @@ export const CLOCK = {
     CLOCK_REALTIME: [0],
     CLOCK_MONOTONIC: [1],
     CLOCK_PROCESS_CPUTIME_ID: [2],
-    CLOCK_THREAD_CPUTIME_ID: [3]
+    CLOCK_THREAD_CPUTIME_ID: [3],
+    CLOCK_MONOTONIC_RAW     : [4],
+    CLOCK_REALTIME_COARSE   : [5],
+    CLOCK_MONOTONIC_COARSE  : [6],
+    CLOCK_BOOTTIME          : [7],
+    CLOCK_REALTIME_ALARM    : [8],
+    CLOCK_BOOTTIME_ALARM    : [9],
+    CLOCK_SGI_CYCLE        : [10],
+    CLOCK_TAI              : [11]
 } ;
 
 export const MNT_ = {
@@ -513,6 +549,11 @@ export const PROT_ = {
     PROT_GROWSDOWN: 0x01000000,
     PROT_GROWSUP: 0x02000000
 };
+export const ITIMER = {
+    ITIMER_REAL:    [0],
+    ITIMER_VIRTUAL: [1],
+    TIMER_PROF:    [2]
+}
 export const MFD = {
     MFD_CLOEXEC: 1,
     MFD_ALLOW_SEALING: 2,
@@ -532,9 +573,19 @@ export const AT_ = {
     AT_STATX_DONT_SYNC: [0x4000],
     AT_RECURSIVE: [0x8000],
 }
-
-
-
+export const PERSO = {
+    UNAME26: [0x0020000],
+    ADDR_NO_RANDOMIZE: [0x0040000],
+    FDPIC_FUNCPTRS: [0x0080000],
+    MMAP_PAGE_ZERO: [0x0100000],
+    ADDR_COMPAT_LAYOUT: [0x0200000],
+    READ_IMPLIES_EXEC: [0x0400000],
+    ADDR_LIMIT_32BIT: [0x0800000],
+    SHORT_INODE: [0x1000000],
+    WHOLE_SECONDS: [0x2000000],
+    STICKY_TIMEOUTS: [0x4000000],
+    ADDR_LIMIT_3GB: [0x8000000]
+};
 const F_ = {
     F_DUPFD: [0],
     F_GETFD: [1],
@@ -551,40 +602,6 @@ const F_ = {
     F_SETOWN_EX: [15],
     F_GETOWN_EX: [16],
     F_GETOWNER_UIDS: [17]
-}
-/**
- * A function to stringify bitmap
- */
-function stringifyBitmap(val:number, flags:any):string{
-    let s = "";
-    for(const f in flags){
-        if((val & flags[f]) == flags[f]) s += (s.length>0?" | ":"")+f;
-    }
-
-    return s;
-}
-function stringifyBitmapArr(val:number, flags:any):string{
-    let s = "";
-    for(const f in flags){
-        if((val & flags[f][0]) == flags[f][0]) s += (s.length>0?" | ":"")+f;
-    }
-
-    return s;
-}
-
-export const I = {
-    KILL_FROM: function(ctx){
-        const f = ctx.x0.toInt32();
-        if(f>0){
-            return f+" (target process)";
-        }
-        else if(f < 0){
-            return f+" (all authorized processes)";
-        }
-        else{
-            return f+" (all processes from process group of calling process)";
-        }
-    }
 }
 
 export const FUTEX:any = {
@@ -620,8 +637,11 @@ FUTEX.FUTEX_WAIT_BITSET_PRIVATE = [(FUTEX.FUTEX_WAIT_BITSET[0] | FUTEX.FUTEX_PRI
 FUTEX.FUTEX_WAKE_BITSET_PRIVATE = [(FUTEX.FUTEX_WAKE_BITSET[0] | FUTEX.FUTEX_PRIVATE_FLAG[0] )];
 FUTEX.FUTEX_WAIT_REQUEUE_PI_PRIVATE = [(FUTEX.FUTEX_WAIT_REQUEUE_PI[0] | FUTEX.FUTEX_PRIVATE_FLAG[0] )];
 FUTEX.FUTEX_CMP_REQUEUE_PI_PRIVATE = [(FUTEX.FUTEX_CMP_REQUEUE_PI[0] | FUTEX.FUTEX_PRIVATE_FLAG[0] )];
-
-
+export const SIG_FLAG = {
+    SIG_BLOCK:     [0],
+    SIG_UNBLOCK:   [1],
+    SIG_SETMASK:   [2]
+}
 // signals : https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/include/uapi/asm-generic/signal.h
 export const S = {
     SIGHUP: [1],
@@ -748,7 +768,10 @@ export const SCHED_ = {
     SCHED_FLAG_UTIL_CLAMP_MIN: [0x20],
     SCHED_FLAG_UTIL_CLAMP_MAX: [0x40]
 };
-
+export const TIMER = {
+    TFD_TIMER_ABSTIME: [(1 << 0)],
+    TFD_TIMER_CANCEL_ON_SET: [(1 << 1)]
+};
 export const RWF = {
     RWF_HIPRI: [0x00000001],
     RWF_DSYNC: [0x00000002],
@@ -756,7 +779,12 @@ export const RWF = {
     RWF_NOWAIT: [0x00000008],
     RWF_APPEND: [0x00000010]
 };
-
+export const SECCOMP = {
+    SECCOMP_SET_MODE_STRICT: [0],
+    SECCOMP_SET_MODE_FILTER: [1],
+    SECCOMP_GET_ACTION_AVAIL: [2],
+    SECCOMP_GET_NOTIF_SIZES: [3]
+};
 export const LOCK = {
 	LOCK_SH: [1],
 	LOCK_EX: [2],
@@ -780,7 +808,54 @@ export const PKEY = {
     PKEY_DISABLE_ACCESS:	[0x1],
     PKEY_DISABLE_WRITE:	[0x2]
 };
-
+export const CLONE = {
+    CLONE_NEWTIME: [0x00000080],
+    CLONE_VM: [0x00000100],
+    CLONE_FS: [0x00000200],
+    CLONE_FILES: [0x00000400],
+    CLONE_SIGHAND: [0x00000800],
+    CLONE_PIDFD: [0x00001000],
+    CLONE_PTRACE: [0x00002000],
+    CLONE_VFORK: [0x00004000],
+    CLONE_PARENT: [0x00008000],
+    CLONE_THREAD: [0x00010000],
+    CLONE_NEWNS: [0x00020000],
+    CLONE_SYSVSEM: [0x00040000],
+    CLONE_SETTLS: [0x00080000],
+    CLONE_PARENT_SETTID: [0x00100000],
+    CLONE_CHILD_CLEARTID: [0x00200000],
+    CLONE_DETACHED: [0x00400000],
+    CLONE_UNTRACED: [0x00800000],
+    CLONE_CHILD_SETTID: [0x01000000],
+    CLONE_NEWCGROUP: [0x02000000],
+    CLONE_NEWUTS: [0x04000000],
+    CLONE_NEWIPC: [0x08000000],
+    CLONE_NEWUSER: [0x10000000],
+    CLONE_NEWPID: [0x20000000],
+    CLONE_NEWNET: [0x40000000],
+    CLONE_IO: [0x80000000]
+}
+export const RUSAGE = {
+    RUSAGE_SELF:		[0],
+    RUSAGE_CHILDREN:		[-1]
+}
+export const IPC = {
+    IPC_RMID: [0], /* remove resource */
+    IPC_SET: [1], /* set ipc_perm options */
+    IPC_STAT: [2], /* get ipc_perm options */
+    IPC_INFO: [3], /* see ipcs */
+    IPC_CREAT:  [0o0001000],   /* create if key is nonexistent */
+    IPC_EXCL:   [0o0002000],   /* fail if key exists */
+    IPC_NOWAIT: [0o0004000]   /* return error on wait */
+}
+export const MSG = {
+    MSG_STAT: [11],
+    MSG_INFO: [12],
+    MSG_STAT_ANY: [13],
+    MSG_NOERROR: [0o010000],
+    MSG_EXCEPT: [0o020000],
+    MSG_COPY: [0o040000]
+}
 //
 export const E = {
 	EPERM : [1,"Not super-user"],
@@ -908,6 +983,40 @@ export const E = {
 };
 
 
+/**
+ * A function to stringify bitmap
+ */
+function stringifyBitmap(val:number, flags:any):string{
+    let s = "";
+    for(const f in flags){
+        if((val & flags[f]) == flags[f]) s += (s.length>0?" | ":"")+f;
+    }
+
+    return s;
+}
+function stringifyBitmapArr(val:number, flags:any):string{
+    let s = "";
+    for(const f in flags){
+        if((val & flags[f][0]) == flags[f][0]) s += (s.length>0?" | ":"")+f;
+    }
+
+    return s;
+}
+
+export const I = {
+    KILL_FROM: function(ctx){
+        const f = ctx.x0.toInt32();
+        if(f>0){
+            return f+" (target process)";
+        }
+        else if(f < 0){
+            return f+" (all authorized processes)";
+        }
+        else{
+            return f+" (all processes from process group of calling process)";
+        }
+    }
+}
 export const ERR = {};
 
 for(const k in E){
@@ -917,7 +1026,7 @@ for(const k in E){
 
 function l( val, list){
     for(const k in list) if(val == list[k][0]) return k;
-    return null;
+    return val;
 }
 
 export const X = {
@@ -944,8 +1053,36 @@ export const X = {
     PKEY_ACL: function(f){
         return l(f,PKEY);
     },
+    RUSAGE: function(f){
+        return l(f, RES);
+    },
+    RES: function(f){
+        return l(f,RES);
+    },
     RWF: function(f){
         return l(f,RWF);
+    },
+    SECCOMP: function(f){
+        return l(f,SECCOMP);
+    },
+    SECCOMP_FLAGS: function(f,cmd){
+        return f;
+        /*
+        switch(cmd){
+            case SECCOMP.SECCOMP_SET_MODE_STRICT:
+                return l(f,SECCOMP);
+                break;
+            case SECCOMP.SECCOMP_SET_MODE_FILTER:
+                return l(f,SECCOMP);
+                break;
+            case SECCOMP.SECCOMP_GET_ACTION_AVAIL:
+                return f;
+            case SECCOMP.SECCOMP_GET_NOTIF_SIZES:
+                return f;
+            default:
+                return f;
+        }
+        */
     },
     MEMBARRIER_CMD: function(f){
         return l(f,MEMBARRIER_CMD);
@@ -954,25 +1091,37 @@ export const X = {
         return l(f,MEMBARRIER_FLAG);
     },
     ACCESS_FLAGS: function(f){
-        return stringifyBitmap(f, {
+        return stringifyBitmapArr(f, {
             AT_SYMLINK_NOFOLLOW: [0x100],
             AT_NO_AUTOMOUNT: [0x800],
             AT_EMPTY_PATH: [0x1000]
         });
     },
     EPOLL_EV: function(f){
-        return stringifyBitmap(f, EPOLL_EV);
+        return stringifyBitmapArr(f, EPOLL_EV);
+    },
+    SPLICE: function(f){
+        return stringifyBitmapArr(f, SPLICE);
+    },
+    ITIMER: function(f){
+        return stringifyBitmapArr(f, ITIMER);
+    },
+    SYNC_FILE: function(f){
+        return stringifyBitmapArr(f, SYNC_FILE);
     },
     EPOLL_CTL: function(f){
-        return stringifyBitmap(f, EPOLL_CTL);
+        return stringifyBitmapArr(f, EPOLL_CTL);
     },
     EPOLL_FLAG: function(f){
-        return stringifyBitmap(f, {
+        return stringifyBitmapArr(f, {
             EPOLL_CLOEXEC: [O_.O_CLOEXEC]
         });
     },
     PRCTL_OPT: function(f){
         return l(f,PR_.OPT);
+    },
+    CLONE: function(f){
+        return stringifyBitmapArr(f,CLONE);
     },
     CLK: function(f){
         return l(f,CLOCK);
@@ -1023,6 +1172,9 @@ export const X = {
                 break;
         }*/
     },
+    PERSO: function(f){
+        return l(f,PERSO);
+    },
     TYPEID: function(f){
         return l(f,K);
     },
@@ -1032,8 +1184,20 @@ export const X = {
     UNLINK: function(f){
         return l(f,{AT_REMOVEDIR:AT_.AT_REMOVEDIR});
     },
-    PIPE_FLAG: function(f){
+    PIPE_FLAG: (f)=>{
         return stringifyBitmapArr(f,{O_NONBLOCK:O_.O_NONBLOCK,O_CLOEXEC :O_.O_CLOEXEC});
+    },
+    SOCKF: (f)=>{
+        return stringifyBitmapArr(f,{SOCK_NONBLOCK:O_.O_NONBLOCK,SOCK_CLOEXEC :O_.O_CLOEXEC});
+    },
+    SFD: (f)=>{
+        return stringifyBitmapArr(f,{SFD_NONBLOCK:O_.O_NONBLOCK,SFD_CLOEXEC :O_.O_CLOEXEC});
+    },
+    TFD: (f)=>{
+        return stringifyBitmapArr(f,{TFD_NONBLOCK:O_.O_NONBLOCK,TFD_CLOEXEC :O_.O_CLOEXEC});
+    },
+    TIMER: (f)=>{
+        return stringifyBitmapArr(f,TIMER);
     },
     FNCTL: function(f){
         return l(f,F_);
@@ -1056,6 +1220,30 @@ export const X = {
                 return f;
         }
     },
+    MSGF: function(f){
+        return stringifyBitmapArr(f,{
+            IPC_NOWAIT: [IPC.IPC_NOWAIT],
+            MSG_EXCEPT : [MSG.MSG_EXCEPT],
+            MSG_NOERROR: [MSG.MSG_NOERROR],
+        });
+    },
+    MSGCTL: function(f){
+        return l(f,{
+            IPC_STAT: [IPC.IPC_NOWAIT],
+            IPC_SET : [IPC.IPC_SET],
+            IPC_RMID: [IPC.IPC_RMID],
+            IPC_INFO: [IPC.IPC_INFO],
+            MSG_INFO: [MSG.MSG_INFO],
+            MSG_STAT: [MSG.MSG_STAT],
+            MSG_STAT_ANY: [MSG.MSG_STAT_ANY]
+        });
+    },
+    DEL_KEXT: function(f){
+        return stringifyBitmapArr(f,{O_NONBLOCK:O_.O_NONBLOCK,O_TRUNC :O_.O_TRUNC});
+    },
+    SIG_FLAGS: function(f){
+        return l(f,SIG_FLAG);
+    },
     SIG: function(f){
         return l(f,S);
     },
@@ -1063,7 +1251,7 @@ export const X = {
         return l(f,PF_);
     },
     SOCK: function(f){
-        return stringifyBitmap(f,SOCK_);
+        return stringifyBitmapArr(f,SOCK_);
     },
     MOUNT_FLAG: function(f){
         return stringifyBitmapArr(f,MOUNT);
@@ -1075,7 +1263,7 @@ export const X = {
         return l(f,MCL_);
     },
     MAP: function(f){
-        return stringifyBitmap(f,MAP_);
+        return stringifyBitmapArr(f,MAP_);
     },
     MS: function(f){
         return l(f,MS_);
@@ -1097,13 +1285,13 @@ export const X = {
         return stringifyBitmap(f,O_);
     },
     F_MODE: function(f){
-        return stringifyBitmap(f,FMODE);
+        return stringifyBitmapArr(f,FMODE);
     },
     UMOUNT: function(f){
-        return stringifyBitmap(f,MNT_);
+        return stringifyBitmapArr(f,MNT_);
     },
     MFD: function(f){
-        return stringifyBitmap(f,MFD);
+        return stringifyBitmapArr(f,MFD);
     },
     MPROT: function(f){
         if(f == PROT_NONE)
