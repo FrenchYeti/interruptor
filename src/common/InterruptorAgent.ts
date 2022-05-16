@@ -2,6 +2,7 @@ import {CoverageAgent} from "../utilities/Coverage";
 
 let CTR = 0;
 
+
 export enum F {
     EXCLUDE_ANY,
     INCLUDE_ANY,
@@ -32,6 +33,8 @@ export class InterruptorAgent {
 
     tid: number = -1;
 
+    emulator:boolean;
+
     followFork:boolean = false;
 
     followThread:boolean = false;
@@ -45,6 +48,8 @@ export class InterruptorAgent {
     moduleFilter: any = null;
 
     debug:boolean = false;
+
+    types:any = null;
 
     /**
      * Filter type : include, equal, exclude
@@ -85,6 +90,7 @@ export class InterruptorAgent {
      */
     constructor( pOptions:any, pDoFollowThread:any = null) {
         this.uid = CTR++;
+        this.emulator = false;
         this._do_ft = pDoFollowThread;
         this.parseOptions(pOptions);
     }
@@ -100,6 +106,12 @@ export class InterruptorAgent {
 
         for(let k in pConfig){
             switch(k){
+                case 'types':
+                    this.types = pConfig.types;
+                    break;
+                case 'emulator':
+                    this.emulator = pConfig.emulator;
+                    break;
                 case 'pid':
                     this.pid = pConfig.pid;
                     break;
@@ -410,7 +422,7 @@ export class InterruptorAgent {
             console.warn("[INTERRUPTOR][STARTING] Thread already tracked");
             return;
         }else{
-            console.warn("[INTERRUPTOR][STARTING] Traching thread "+tid+" ["+this._tids.join(",")+"]");
+            console.warn("[INTERRUPTOR][STARTING] Tracing thread "+tid+" ["+this._tids.join(",")+"]");
             this._tids.push(tid);
         }
 
@@ -481,7 +493,6 @@ export class InterruptorAgent {
         if(this._do_ft !== null){
             this._do_ft(this);
         }
-
     }
 
 }

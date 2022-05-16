@@ -1,5 +1,3 @@
-
-
 /**
  * Abstract class
  *
@@ -7,8 +5,12 @@
  *
  *  @class
  */
+import {TypeDef, TypeDefList} from "./TypeDef";
+
+
 export abstract class AbstractInterruptorFactory {
 
+    typeDefs:TypeDefList;
     opts:any = null;
     static _tcolors: number[] = [0];
 
@@ -63,6 +65,16 @@ export abstract class AbstractInterruptorFactory {
 
     getOptions():any {
         return this.opts;
+    }
+
+    newTypeDefinition(pTypes:any):TypeDefList {
+        this.typeDefs = {};
+
+        for(let i in pTypes){
+            this.typeDefs[i] = new TypeDef(pTypes[i]);
+        }
+
+        return this.typeDefs;
     }
 
 }

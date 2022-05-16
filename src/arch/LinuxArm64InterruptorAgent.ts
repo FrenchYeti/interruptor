@@ -3,6 +3,8 @@ import {InterruptorGenericException} from "../common/InterruptorException";
 import {T,L} from "../common/Types";
 import * as DEF from "./LinuxArm64Flags";
 import {TypedData} from "../common/TypedData";
+import {TYPES} from "./LinuxArm64Types";
+import {TypeDef} from "../common/TypeDef";
 
 // GPR = Global Purpose Register prefix => x/r
 const GPR = "x";
@@ -19,34 +21,10 @@ const MAP_ = DEF.MAP_;
 const X = DEF.X;
 const _ = TypedData.from;
 
-export const DSTRUCTS = {
-    __old_kernel_stat : [
-        _({t:T.ULONG, n:"st_dev", l:L.DEV}),
-        _({t:T.UINT32, n:"__pad0"}),
-        _({t:T.ULONG, n:"st_ino", l:L.INODE}),
-        _({t:T.USHORT, n:"st_mode", l:L.FLAG, f:X.O_MODE}),
-        _({t:T.USHORT, n:"st_nlink" }),
-        _({t:T.USHORT, n:"st_uid", l:L.UID}),
-        _({t:T.USHORT, n:"st_gid", l:L.GID}),
-        _({t:T.ULONG, n:"st_rdev", l:L.DEV}),
-        _({t:T.ULONG, n:"st_size", l:L.SIZE}),
-        _({t:T.ULONG, n:"st_blksize", l:L.SIZE}),
-        _({t:T.ULONG, n:"st_blocks", l:L.SIZE}),
-        _({t:T.ULONG, n:"st_atime (last access)", l:L.TIME}),
-        _({t:T.ULONG, n:"st_atime_nsec (last access)"}),
-        _({t:T.ULONG, n:"st_mtime (modified)", l:L.TIME}),
-        _({t:T.ULONG, n:"st_mtime_nsec (modified)"}),
-        _({t:T.ULONG, n:"st_ctime (created)", l:L.TIME}),
-        _({t:T.ULONG, n:"st_ctime_nsec (created)"}),
-    ],
-    iovec : [
-        _({t:T.POINTER64, n:"iov_base"}),
-        _({t:T.UINT32, n:"iov_len"}),
-    ]
-};
+export const DSTRUCTS = TYPES;
+
 // internal structs are always parsed
-export const IDSTRUCTS = {
-};
+export const IDSTRUCTS = {};
 
 // arguments template
 const A = {
@@ -91,7 +69,7 @@ const A = {
     OUTPUT_CHAR_BUFFER: _({t:T.POINTER64, n:"buf", l:L.OUTPUT_BUFFER}),
     OUTPUT_BUFFER_LEN: _({t:T.INT32, n:"size", l:L.SIZE}),
     IOPRIO_WHICH: _({ t:T.INT32, n:"which", l:L.FLAG, r:"x1", f:X.IOPRIO_WHICH }),
-    IOVEC: _({t:T.POINTER64, n:"*iovec", l:L.DSTRUCT, f:DSTRUCTS.iovec, c:true}),
+    IOVEC: _({t:T.POINTER64, n:"*iovec", l:L.DSTRUCT, f:"iovec", c:true}),
     ACCESS_FLAGS: _({t:T.INT32, n:"flag", l:L.FLAG, f:X.ACCESS_FLAGS}),
     PKEY: _({ t:T.INT32, n:"pkey", l:L.PKEY}),
     RWF: _({t:T.INT32, n:"rwf", l:L.FLAG, f:X.RWF}),
@@ -207,7 +185,7 @@ const SVC = [
     [77,"tee",0x4d,[{t:T.UINT32, n:"fd_in", l:L.FD},{t:T.UINT32, n:"fd_out", l:L.FD},"size_t len","unsigned int flags"]],
     [78,"readlinkat",0x4e,[A.DFD, {t:T.STRING, n:"path", l:L.PATH, c:true},A.OUTPUT_CHAR_BUFFER,A.SIZE]],
     [79,"newfstatat",0x4f,[A.DFD,{t:T.STRING, n:"filename", c:true},{t:T.POINTER64, n:"struct stat *statbuf"}, A.ACCESS_FLAGS],RET.ACCESS],
-    [80,"fstat",0x50,[{t:T.UINT32, n:"fd", l:L.FD},{t:T.POINTER64, n:"*statbuf", l:L.DSTRUCT, f:DSTRUCTS.__old_kernel_stat}]],
+    [80,"fstat",0x50,[{t:T.UINT32, n:"fd", l:L.FD},{t:T.POINTER64, n:"*statbuf", l:L.DSTRUCT, f:"__old_kernel_stat"}]],
     [81,"sync",0x51,[]],
     [82,"fsync",0x52,[A.FD]],
     [83,"fdatasync",0x53,[A.FD]],
@@ -604,15 +582,39 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
     }
 
     startOnLoad( pModuleRegExp:RegExp, pOptions:any = null):any {
-        let self=this, do_dlopen = null, call_ctor = null, match=null;
+        let self=this, do_dlopen = null, call_ctor = null, scopedTrace = null, extra = null, match=null;
         let opts = pOptions;
         Process.findModuleByName('linker64').enumerateSymbols().forEach(sym => {
             if (sym.name.indexOf('do_dlopen') >= 0) {
                 do_dlopen = sym.address;
             } else if (sym.name.indexOf('call_constructor') >= 0) {
                 call_ctor = sym.address;
+            } else if(sym.name.indexOf('__dl__ZN11ScopedTrace3EndEv') >= 0){
+                scopedTrace = sym.address;
             }
         });
+
+        if(this.emulator && scopedTrace!=null){
+            const ScopedTraceEnd = new NativeCallback(():number=>{
+                return 1;
+            }, 'int', ['int']);
+
+            Interceptor.replace(scopedTrace, ScopedTraceEnd);
+        }
+
+        if(extra != null){
+            Interceptor.attach(extra,  {
+                onEnter: function(args){
+                    this.out = args[0];
+                    console.log( hexdump(this.out,{length:64}) );
+                },
+                onLeave: function(ret){
+
+                    //console.log( hexdump(this.out,{length:64}) );
+                }
+            });
+        }
+
 
         Interceptor.attach(do_dlopen, function (args) {
             const p = args[0].readUtf8String();
@@ -642,7 +644,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
 
                 self.start();
 
-                if(pOptions.hasOwnProperty('threshold')){
+                if(pOptions!=null && pOptions.hasOwnProperty('threshold')){
                     console.log(self.loadCtr, pOptions.threshold)
                     if(self.loadCtr < pOptions.threshold){
                         self.loadCtr++;
@@ -668,13 +670,17 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
      * @param pPointer
      * @method
      */
-    parseStruct( pContext:any, pFormat:any[], pPointer:NativePointer, pSeparator:string ="\n", pAlign:boolean = false):string {
+    parseStruct( pContext:any, pFormats:TypedData[], pPointer:NativePointer, pSeparator:string ="\n", pAlign:boolean = false):string {
 
-        let msg:string = " {"+pSeparator, fmt:any = null, v:string = "", val:any = null;
+        let msg:string = " {"+pSeparator;
+        let fmt:TypedData = null, v:string = "", val:any = null;
         let offset:number =0;
-        //console.log(hexdump(pPointer,{length:128}));
-        for(let i=0; i<pFormat.length; i++){
-            fmt = pFormat[i];
+
+        //console.log("DSTRUCT",JSON.stringify(pFormats));
+
+        for(let i=0; i<pFormats.length; i++){
+            fmt = pFormats[i];
+            //console.log("TYPED_DATA",JSON.stringify(fmt));
             switch(fmt.t){
                 case T.SHORT:
                     val = pPointer.add(offset).readShort();
@@ -706,6 +712,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                     break;
 
             }
+            //console.log(JSON.stringify(fmt),val,i);
             v = this.parseValue( pContext, val, fmt, i);
             msg += ` \t${fmt.n} = ${v},${pSeparator}`;
         }
@@ -722,11 +729,15 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
      */
     parseValue( pContext:any, pValue:any, pFormat:any, pIndex:number):any {
         let p: string = "", rVal: any = null, t: any = null;
+
+
         if (typeof pFormat === "string") {
             p = pValue; //` ${pFormat} = ${pValue}`;
         } else {
             rVal = pValue;
             //p += ` ${pFormat.n} = `;
+
+            const f = pFormat.f;
 
             switch (pFormat.l) {
                 case L.DFD:
@@ -792,13 +803,16 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                     pContext.dxcOpts[pIndex] = rVal;
                     break;
                 case L.DSTRUCT:
-                    if (pContext.dxcOpts._extra == null) pContext.dxcOpts._extra = [];
-                    pFormat.r = pIndex;
-                    pFormat.v = rVal;
-                    pContext.dxcOpts._extra.push(pFormat);
-                    p += `${rVal} ${pFormat.c ? this.parseStruct( pContext, pFormat.f, pFormat.v, "" ) : ""}`
-                    pContext.dxcOpts[pIndex] = rVal;
-                    break;
+                    if(this.types[pFormat.f] != null){
+                        if (pContext.dxcOpts._extra == null) pContext.dxcOpts._extra = [];
+                        pFormat.r = pIndex;
+                        pFormat.v = rVal;
+                        pContext.dxcOpts._extra.push(pFormat);
+                        pContext.dxcOpts[pIndex] = rVal;
+
+                        p += `${rVal} ${pFormat.c===true ? this.parseStruct( pContext, this.types[pFormat.f].getStruct(), pFormat.v, "" ) : ""}`;
+                        break;
+                    }
                 default:
                     switch (pFormat.t) {
                         case T.STRING:
@@ -904,6 +918,9 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                             pContext.dxc = {FD:{}};
                             pContext.dxcFD = pContext.dxc.FD = {};
                         }
+                        if(pContext.dxc.FD==null){
+                            pContext.dxcFD = pContext.dxc.FD = {};
+                        }
                         pContext.dxc.FD[ pContext.x0.toInt32()+""] = pContext.dxcOpts[ret.r];
                         ret = "("+(L.DFD==ret.l?"D":"")+"FD) "+pContext.x0;
                     }else if(ret.e){
@@ -971,12 +988,16 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
         // to process extra data such as structured data edited or passed as args
         if(pContext.dxcOpts != null && pContext.dxcOpts._extra){
             pContext.dxcOpts._extra.map( x => {
-                if(x.v != null)
-                    // if the pointer has been saved before to call the syscall, then it uses saved value
-                    console.log(` ${x.n} = `+this.parseStruct( pContext, x.f, x.v ));
-                else
-                    // if the register holding the pointer has been modified by the syscall, then it read register value
-                    console.log(` ${x.n} = `+this.parseStruct( pContext, x.f, pContext.dxcOpts[x.r] ));
+
+                console.log(` ${x.n} = `+this.parseStruct(
+                    pContext,
+                    this.types[x.f].getStruct(),
+                    (x.v != null ?
+                        // if the pointer has been saved before to call the syscall, then it uses saved value
+                        x.v :
+                        // if the register holding the pointer has been modified by the syscall, then it read register value
+                        pContext.dxcOpts[x.r] )
+                ));
             });
         }
 
@@ -1022,7 +1043,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
 
                 if(isExcludedFn!=null && isExcludedFn(n)) return;
 
-                if(context.dxc.FD==null) context.dxc = {FD:{}};
+                if(context.dxc==null) context.dxc = {FD:{}};
                 const hook = self.svc_hk[n];
 
 
