@@ -5,6 +5,8 @@
 
  */
 import {InterruptorGenericException} from "../common/InterruptorException";
+import {T, L} from  "../common/Types";
+import {X} from "../arch/LinuxArm64Flags";
 import {InterruptorAgent} from "../common/InterruptorAgent";
 import {AbstractInterruptorFactory} from "../common/AbstractInterruptorFactory";
 import {LinuxArm64InterruptorAgent, KAPI} from "./LinuxArm64InterruptorAgent";
@@ -25,6 +27,10 @@ function deepCopy(pSrcObject:any): any {
 export class LinuxArm64InterruptorFactory extends AbstractInterruptorFactory {
 
     KAPI:any = KAPI;
+    T:any = T;
+    L:any = L;
+    X:any = X;
+
     static HOOKED_PTHREAD_ROUTINE: any = {};
     static AGENTS: any[] = [];
 
