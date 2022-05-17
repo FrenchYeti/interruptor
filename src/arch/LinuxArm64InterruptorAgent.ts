@@ -3,8 +3,6 @@ import {InterruptorGenericException} from "../common/InterruptorException";
 import {T,L} from "../common/Types";
 import * as DEF from "./LinuxArm64Flags";
 import {TypedData} from "../common/TypedData";
-import {TYPES} from "./LinuxArm64Types";
-import {TypeDef} from "../common/TypeDef";
 
 // GPR = Global Purpose Register prefix => x/r
 const GPR = "x";
@@ -21,7 +19,7 @@ const MAP_ = DEF.MAP_;
 const X = DEF.X;
 const _ = TypedData.from;
 
-export const DSTRUCTS = TYPES;
+export const DSTRUCTS = {};
 
 // internal structs are always parsed
 export const IDSTRUCTS = {};
@@ -70,6 +68,8 @@ const A = {
     OUTPUT_BUFFER_LEN: _({t:T.INT32, n:"size", l:L.SIZE}),
     IOPRIO_WHICH: _({ t:T.INT32, n:"which", l:L.FLAG, r:"x1", f:X.IOPRIO_WHICH }),
     IOVEC: _({t:T.POINTER64, n:"*iovec", l:L.DSTRUCT, f:"iovec", c:true}),
+    KERNEL_TIMESPEC: _({t:T.POINTER64, n:"*__kernel_timespec", l:L.DSTRUCT, f:"__kernel_timespec"} ),
+    CONST_KERNEL_TIMESPEC: _({t:T.POINTER64, n:"*__kernel_timespec", l:L.DSTRUCT, f:"__kernel_timespec", c:true} ),
     ACCESS_FLAGS: _({t:T.INT32, n:"flag", l:L.FLAG, f:X.ACCESS_FLAGS}),
     PKEY: _({ t:T.INT32, n:"pkey", l:L.PKEY}),
     RWF: _({t:T.INT32, n:"rwf", l:L.FLAG, f:X.RWF}),
@@ -82,7 +82,11 @@ const A = {
     OMODE: _({t:T.UINT32, n:"mode", l:L.FLAG, f:X.UMASK}),
     MQD: _({ t:T.INT32, n:"mod_t mqdes", l:L.MQDES}),
     MQID: _({ t:T.INT32, n:"msqid" }),
-    SEMID: _({ t:T.INT32, n:"semid" })
+    SEMID: _({ t:T.INT32, n:"semid" }),
+    IOCB: _({t:T.POINTER64, n:"*iocb", l:L.DSTRUCT, f:"iocb"} ),
+    IOEV: _({t:T.POINTER64, n:"*io_event", l:L.DSTRUCT, f:"io_event"} ),
+    SCHED_PARAM: _({t:T.POINTER64, n:"*sched_param", l:L.DSTRUCT, f:"sched_param"})
+
 }
 A.SIGMASK.update({ f:A.SIG, len:16 });
 
@@ -108,8 +112,8 @@ const SVC = [
     [0,"io_setup",0x00,[{t:T.UINT32, n:"nr_reqs"},{t:T.POINTER64, n:"aio_context_t *ctx"}]],
     [1,"io_destroy",0x01,[A.AIO],RET.IO],
     [2,"io_submit",0x02,[A.AIO,{t:T.LONG, n:"nr"},{t:T.POINTER64, n:"struct iocb **iocbpp"}],RET.IO],
-    [3,"io_cancel",0x03,[A.AIO,{t:T.POINTER64, n:"struct iocb *iocb"},{t:T.POINTER64, n:"struct io_event *result"}],RET.IO],
-    [4,"io_getevents",0x04,[A.AIO,{t:T.LONG, n:"long min_nr"},{t:T.LONG, n:"nr"},{t:T.POINTER64, n:"struct io_event *events"} ,{t:T.POINTER64, n:"struct __kernel_timespec *timeout"} ],RET.IO],
+    [3,"io_cancel",0x03,[A.AIO,A.IOCB,A.IOEV.copy("result")],RET.IO],
+    [4,"io_getevents",0x04,[A.AIO,{t:T.LONG, n:"long min_nr"},{t:T.LONG, n:"nr"},A.IOEV.copy("*events"),A.KERNEL_TIMESPEC.copy("timeout") ],RET.IO],
     [5,"setxattr",0x05,[A.CONST_PATH,A.CONST_NAME,A.PTR,A.SIZE,A.XATTR],RET.SET_XATTR],
     [6,"lsetxattr",0x06,[A.CONST_PATH,A.CONST_NAME,A.PTR,A.SIZE,A.XATTR],RET.SET_XATTR],
     [7,"fsetxattr",0x07,[A.FD,A.CONST_NAME,A.CONST_PTR,A.SIZE,A.XATTR],RET.SET_XATTR],
@@ -148,8 +152,8 @@ const SVC = [
     [40,"mount",0x28,[ A.STR.copy("dev_name"), A.STR.copy("dir_name"), A.STR.copy("type"),{t:T.ULONG, n:"flags", l:L.FLAG, f:X.MOUNT_FLAG},{t:T.POINTER64, n:"*dat"}]],
     [41,"pivot_root",0x29,[A.CONST_NAME.copy("new_root"),A.CONST_NAME.copy("put_old")]],
     [42,"nfsservctl",0x2a,["REMOVED int cmd", "struct nfsctl_arg *argp","union nfsctl_res *resp"]], // REMOVED since 3.1
-    [43,"statfs",0x2b,[A.CONST_PATH,"struct statfs *buf"]],
-    [44,"fstatfs",0x2c,[A.FD,"struct statfs *buf"]],
+    [43,"statfs",0x2b,[A.CONST_PATH,{t:T.POINTER64, n:"statfs *buf", l:L.DSTRUCT, f:"statfs"}]],
+    [44,"fstatfs",0x2c,[A.FD,{t:T.POINTER64, n:"statfs *buf", l:L.DSTRUCT, f:"statfs"}]],
     [45,"truncate",0x2d,[A.CONST_PATH, A.SIGNED_LEN]],
     [46,"ftruncate",0x2e,[A.FD,A.LEN],RET.OPEN /* similar to open() */],
     [47,"fallocate",0x2f,[A.FD,{t:T.INT32, n:"mode", l:L.FLAG, f:X.FALLOC},A.LOFFSET,A.LEN]],
@@ -166,7 +170,7 @@ const SVC = [
     [58,"vhangup",0x3a,[]],
     [59,"pipe2",0x3b,[{t:T.POINTER64, n:"pipefd", l:L.PIPEFD},{t:T.INT32, n:"flags", l:L.FLAG, f:X.PIPE_FLAG}]],
     [60,"quotactl",0x3c,["unsigned int cmd",A.CONST_NAME.copy("special"),"qid_t id","void *addr"]],
-    [61,"getdents64",0x3d,[{t:T.UINT32, n:"fd", l:L.FD},"struct linux_dirent64 *dirent",A.SIZE]],
+    [61,"getdents64",0x3d,[{t:T.UINT32, n:"fd", l:L.FD},{t:T.POINTER64, n:"linux_dirent64 *dirent", l:L.DSTRUCT, f:"linux_dirent64"},A.SIZE]],
     [62,"lseek",0x3e,[A.FD,A.OFFSET,{t:T.UINT32, n:"whence", l:L.FLAG, f:X.SEEK}]],
     [63,"read",0x3f,[A.FD, A.OUTPUT_CHAR_BUFFER, {t:T.UINT32, n:"count", l:L.SIZE}], {t:T.UINT32, r:1, n:"sz", l:L.SIZE}],
     [64,"write",0x40,[A.FD,{t:T.CHAR_BUFFER, n:"buf", c:true},A.SIZE]],
@@ -177,8 +181,8 @@ const SVC = [
     [69,"preadv",0x45,[A.FD,A.IOVEC,A.SIZE.copy('iovcnt'),A.LOFFSET]],
     [70,"pwritev",0x46,[A.FD,A.IOVEC,A.SIZE.copy('iovcnt'),A.LOFFSET]],
     [71,"sendfile",0x47,[A.FD.copy("out_fd"),A.FD.copy("in_fd"),A.OFFSET,A.SIZE]],
-    [72,"pselect6",0x48,[{t:T.INT32, n:"nfds"},A.FD_SET.copy("readfds"),A.FD_SET.copy("writefds"),A.FD_SET.copy("exceptfds"),"struct __kernel_timespec *","const sigset_t *sigmask"]],
-    [73,"ppoll",0x49,["struct pollfd *",A.SIZE.copy("nfds"),"struct __kernel_timespec *","const sigset_t sigmask*"]],
+    [72,"pselect6",0x48,[{t:T.INT32, n:"nfds"},A.FD_SET.copy("readfds"),A.FD_SET.copy("writefds"),A.FD_SET.copy("exceptfds"),A.KERNEL_TIMESPEC,"const sigset_t *sigmask"]],
+    [73,"ppoll",0x49,["struct pollfd *",A.SIZE.copy("nfds"),A.KERNEL_TIMESPEC,"const sigset_t sigmask*"]],
     [74,"signalfd4",0x4a,[A.FD,"sigset_t *user_mask",A.SIZE.copy("sizemask"),{ t:T.INT32, n:"flags", l:L.FLAG, f:X.SFD}]],
     [75,"vmsplice",0x4b,[A.FD,A.IOVEC,A.LEN.copy("nr_segs"),{ t:T.UINT32, n:"flags", l:L.FLAG, f:X.SPLICE}]],
     [76,"splice",0x4c,[{t:T.UINT32, n:"fd_in", l:L.FD},A.LOFFSET.copy('*off_in'),{t:T.UINT32, n:"fd_out", l:L.FD},A.LOFFSET.copy('*off_out'),A.SIZE,"unsigned int flags["]],
@@ -191,9 +195,9 @@ const SVC = [
     [83,"fdatasync",0x53,[A.FD]],
     [84,"sync_file_range",0x54,[A.FD,A.LOFFSET,A.LEN.copy('nbytes'),{ t:T.UINT32, n:"flags", l:L.FLAG, f:X.SYNC_FILE}]],
     [85,"timerfd_create",0x55,[A.CLKID,{ t:T.INT32, n:"flags", l:L.FLAG, f:X.TFD}],A.FD.asReturn([])],
-    [86,"timerfd_settime",0x56,[A.FD,{ t:T.INT32, n:"flags", l:L.FLAG, f:X.TIMER},"const struct __kernel_itimerspec *new","struct __kernel_itimerspec *old"]],
+    [86,"timerfd_settime",0x56,[A.FD,{ t:T.INT32, n:"flags", l:L.FLAG, f:X.TIMER},A.CONST_KERNEL_TIMESPEC.copy("new"),"struct __kernel_itimerspec *old"]],
     [87,"timerfd_gettime",0x57,[A.FD,"struct __kernel_itimerspec *curr_val"]],
-    [88,"utimensat",0x58,[A.DFD,{t:T.STRING, n:"filename", c:true},"struct __kernel_timespec *utimes","int flags"]],
+    [88,"utimensat",0x58,[A.DFD,{t:T.STRING, n:"filename", c:true},A.KERNEL_TIMESPEC.copy("utimes"),"int flags"]],
     [89,"acct",0x59,[{t:T.STRING, n:"name", c:true}]],
     [90,"capget",0x5a,["cap_user_header_t header","cap_user_data_t dataptr"]],
     [91,"capset",0x5b,["cap_user_header_t header","const cap_user_data_t data"]],
@@ -203,10 +207,10 @@ const SVC = [
     [95,"waitid",0x5f,[{ t:T.INT32, n:"type_id", l:L.FLAG, f:X.TYPEID},{t:T.UINT32, n:"id"},"struct siginfo *infop","int options","struct rusage *r"]],
     [96,"set_tid_address",0x60,[{t:T.POINTER32, n:"*tidptr"}],A.CALLER_TID],
     [97,"unshare",0x61,[{ t:T.INT32, n:"flags", l:L.FLAG, f:X.CLONE}]],
-    [98,"futex",0x62,[ {t:T.UINT32, n:"word", l:L.FUTEX},{ t:T.INT32, n:"op", l:L.FLAG, f:X.FUTEX_OPE}, "u32 val","struct __kernel_timespec *utime","u32 *uaddr2","u32 val3["]],
+    [98,"futex",0x62,[ {t:T.UINT32, n:"word", l:L.FUTEX},{ t:T.INT32, n:"op", l:L.FLAG, f:X.FUTEX_OPE}, "u32 val",A.KERNEL_TIMESPEC.copy("*utime"),"u32 *uaddr2","u32 val3["]],
     [99,"set_robust_list",0x63,["struct robust_list_head *head",A.LEN]],
     [100,"get_robust_list",0x64,[A.PID,"struct robust_list_head * *head_ptr","size_t *len_ptr"]],
-    [101,"nanosleep",0x65,["struct __kernel_timespec *rqtp","struct __kernel_timespec *rmtp"]],
+    [101,"nanosleep",0x65,[A.KERNEL_TIMESPEC.copy("*rqtp"),A.KERNEL_TIMESPEC.copy("*rmtp")]],
     [102,"getitimer",0x66,[A.TIMER,"struct itimerval *value"]],
     [103,"setitimer",0x67,[A.TIMER,"struct itimerval *value","struct itimerval *ovalue"]],
     [104,"kexec_load",0x68,[{t:T.ULONG, n:"entry"},"unsigned long nr_segments","struct kexec_segment *segments","unsigned long flags"]],
@@ -217,22 +221,22 @@ const SVC = [
     [109,"timer_getoverrun",0x6d,[A.TIMER]],
     [110,"timer_settime",0x6e,[A.TIMER,"int flags","const struct __kernel_itimerspec *new_setting","struct __kernel_itimerspec *old_setting"]],
     [111,"timer_delete",0x6f,[A.TIMER]],
-    [112,"clock_settime",0x70,[A.CLKID ,"const struct __kernel_timespec *tp"]],
-    [113,"clock_gettime",0x71,[A.CLKID,"struct __kernel_timespec *tp"]],
-    [114,"clock_getres",0x72,[A.CLKID,"struct __kernel_timespec *tp"]],
-    [115,"clock_nanosleep",0x73,[A.CLKID,"int flags","const struct __kernel_timespec *rqtp","struct __kernel_timespec *rmtp"]],
+    [112,"clock_settime",0x70,[A.CLKID ,A.CONST_KERNEL_TIMESPEC.copy("*tp")]],
+    [113,"clock_gettime",0x71,[A.CLKID,A.KERNEL_TIMESPEC.copy("*tp")]],
+    [114,"clock_getres",0x72,[A.CLKID,A.KERNEL_TIMESPEC.copy("*tp")]],
+    [115,"clock_nanosleep",0x73,[A.CLKID,"int flags",A.CONST_KERNEL_TIMESPEC.copy("*rqtp"),A.KERNEL_TIMESPEC.copy("*rmtp")]],
     [116,"syslog",0x74,["int type",A.OUTPUT_CHAR_BUFFER,A.OUTPUT_BUFFER_LEN]],
     [117,"ptrace",0x75,[{t:T.LONG, n:"request", l:L.FLAG, f:X.PTRACE },{t:T.LONG, n:"pid", l:L.PID },A.ADDR,"unsigned long data"]],
-    [118,"sched_setparam",0x76,[A.PID,"struct sched_param *param"]],
-    [119,"sched_setscheduler",0x77,[A.PID,A.SCHED_POLICY,"struct sched_param *param"]],
+    [118,"sched_setparam",0x76,[A.PID,A.SCHED_PARAM]],
+    [119,"sched_setscheduler",0x77,[A.PID,A.SCHED_POLICY,A.SCHED_PARAM]],
     [120,"sched_getscheduler",0x78,[A.PID]],
-    [121,"sched_getparam",0x79,[A.PID,"struct sched_param *param"]],
+    [121,"sched_getparam",0x79,[A.PID,A.SCHED_PARAM]],
     [122,"sched_setaffinity",0x7a,[A.PID,A.SIZE.copy("cpusetsize"),"unsigned long *user_mask_ptr"]],
     [123,"sched_getaffinity",0x7b,[A.PID,A.SIZE.copy("cpusetsize"),"unsigned long *user_mask_ptr"]],
     [124,"sched_yield",0x7c,[]],
     [125,"sched_get_priority_max",0x7d,[A.SCHED_POLICY]],
     [126,"sched_get_priority_min",0x7e,[A.SCHED_POLICY]],
-    [127,"sched_rr_get_interval",0x7f,[A.PID,"struct __kernel_timespec *interval"]],
+    [127,"sched_rr_get_interval",0x7f,[A.PID,A.KERNEL_TIMESPEC.copy("*interval")]],
     [128,"restart_syscall",0x80,[]],
     [129,"kill",0x81,[A.PID,A.SIG]],
     [130,"tkill",0x82,[A.PID,A.SIG]],
@@ -242,7 +246,7 @@ const SVC = [
     [134,"rt_sigaction",0x86,[A.SIG,"const struct sigaction *","struct sigaction *",A.SIZE]],
     [135,"rt_sigprocmask",0x87,[{ t:T.INT32, n:"how", l:L.FLAG, f:X.SIG_FLAGS},"sigset_t *set","sigset_t *oset","size_t sigsetsize"]],
     [136,"rt_sigpending",0x88,["sigset_t *set",A.SIZE.copy("sigsetsize")]],
-    [137,"rt_sigtimedwait",0x89,["const sigset_t *uthese","siginfo_t *uinfo","const struct __kernel_timespec *uts","size_t sigsetsize"]],
+    [137,"rt_sigtimedwait",0x89,["const sigset_t *uthese","siginfo_t *uinfo",A.CONST_KERNEL_TIMESPEC.copy("*uts"),"size_t sigsetsize"]],
     [138,"rt_sigqueueinfo",0x8a,[A.PID,A.SIG,"siginfo_t *uinfo"]],
     [139,"rt_sigreturn",0x8b,[]],
     [140,"setpriority",0x8c,[A.IOPRIO_WHICH,{t:T.INT32, n:"who"},{t:T.INT32, n:"ioprio"}]],
@@ -287,8 +291,8 @@ const SVC = [
     [179,"sysinfo",0xb3,["struct sysinfo *info"]],
     [180,"mq_open",0xb4,[ A.CONST_NAME,A.OFLAGS,A.OMODE,"struct mq_attr *attr"]],
     [181,"mq_unlink",0xb5,[A.CONST_NAME]],
-    [182,"mq_timedsend",0xb6,[A.MQD,A.CONST_NAME.copy("*msg_ptr"),A.SIZE.copy("msg_len"),"unsigned int msg_prio","const struct __kernel_timespec *abs_timeout"]],
-    [183,"mq_timedreceive",0xb7,[A.MQD,A.OUTPUT_CHAR_BUFFER.copy("*msg_ptr"),A.SIZE.copy("msg_len"),"unsigned int *msg_prio","const struct __kernel_timespec *abs_timeout"]],
+    [182,"mq_timedsend",0xb6,[A.MQD,A.CONST_NAME.copy("*msg_ptr"),A.SIZE.copy("msg_len"),"unsigned int msg_prio",A.CONST_KERNEL_TIMESPEC.copy("*abs_timeout") ]],
+    [183,"mq_timedreceive",0xb7,[A.MQD,A.OUTPUT_CHAR_BUFFER.copy("*msg_ptr"),A.SIZE.copy("msg_len"),"unsigned int *msg_prio",A.CONST_KERNEL_TIMESPEC.copy("*abs_timeout")  ]],
     [184,"mq_notify",0xb8,[A.MQD,"const struct sigevent *notification"]],
     [185,"mq_getsetattr",0xb9,[A.MQD,"const struct mq_attr *mqstat","struct mq_attr *omqstat"]],
     [186,"msgget",0xba,["key_t key",{t:T.INT32, n:"msgflg", l:L.FLAG, f:X.MSGF}]],
@@ -297,7 +301,7 @@ const SVC = [
     [189,"msgsnd",0xbd,[A.MQID,"struct msgbuf *msgp",A.SIZE.copy("msgsz"),{t:T.INT32, n:"msgflg", l:L.FLAG, f:X.MSGF}]],
     [190,"semget",0xbe,["key_t key",A.SIZE.copy("nsems"),"int semflg"]],
     [191,"semctl",0xbf,[A.SEMID,"int semnum","int cmd","unsigned long arg"]],
-    [192,"semtimedop",0xc0,[A.SEMID,"struct sembuf *sops","unsigned nsops","const struct __kernel_timespec *timeout"]],
+    [192,"semtimedop",0xc0,[A.SEMID,"struct sembuf *sops","unsigned nsops",A.CONST_KERNEL_TIMESPEC.copy("*timeout") ]],
     [193,"semop",0xc1,[A.SEMID,"struct sembuf *sops","unsigned nsops"]],
     [194,"shmget",0xc2,["key_t key","size_t size","int flag"]],
     [195,"shmctl",0xc3,["int shmid","int cmd","struct shmid_ds *buf"]],
@@ -348,7 +352,7 @@ const SVC = [
     [240,"rt_tgsigqueueinfo",0xf0,[{t:T.INT32, n:"tgid", l:L.PID },A.PID,A.SIG,"siginfo_t *uinfo"]],
     [241,"perf_event_open",0xf1,["struct perf_event_attr *attr_uptr",{t:T.INT32, n:"pid", l:L.PID },"int cpu","int group_fd","unsigned long flags"]],
     [242,"accept4",0xf2,[A.SOCKFD,"struct sockaddr *",A.SIZE.out(),{t:T.INT32, n:"type", l:L.FLAG, f:X.SOCKF}]],
-    [243,"recvmmsg",0xf3,[ {t:T.UINT32, n:"fd", l:L.FD},"struct mmsghdr *msg","unsigned int vlen","unsigned flags","struct __kernel_timespec *timeout"]],
+    [243,"recvmmsg",0xf3,[ {t:T.UINT32, n:"fd", l:L.FD},"struct mmsghdr *msg","unsigned int vlen","unsigned flags",A.KERNEL_TIMESPEC.copy("*timeout") ]],
     [244,"not implemented 244",0xf4,[]],
     [245,"not implemented 245",0xf5,[]],
     [246,"not implemented 246",0xf6,[]],
