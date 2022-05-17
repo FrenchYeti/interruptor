@@ -645,12 +645,12 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                 self.start();
 
                 if(pOptions!=null && pOptions.hasOwnProperty('threshold')){
-                    console.log(self.loadCtr, pOptions.threshold)
+                    //console.log(self.loadCtr, pOptions.threshold)
                     if(self.loadCtr < pOptions.threshold){
                         self.loadCtr++;
                         self.onStart( tmp, this);
                     }else{
-                        console.error("[INTERRUPTOR][STARTING] Threshold reached");
+                        console.warn("[INTERRUPTOR][STARTING] Threshold reached");
                         match = null;
                         return ;
                     }
@@ -755,7 +755,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                     todo : inject api into context to access current syscall data  : pContext.svc.mmap.flags
                      */
                     t = rVal.toInt32();
-                    if (t >= 0)
+                    if (pContext.dxc.FD!=null && t >= 0)
                         p += `${t}  ${pContext.dxc.FD[rVal.toInt32() + ""]}  `;
                     else if ((t & MAP_.MAP_ANONYMOUS[0]) == MAP_.MAP_ANONYMOUS[0])
                         p += `${t} IGNORED  `
@@ -764,7 +764,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                     return;
                 case L.FD:
                     t = rVal.toInt32();
-                    if (t >= 0)
+                    if (pContext.dxc.FD!=null && t >= 0)
                         p += `${t}  ${pContext.dxc.FD[t + ""]}  `;
                     else if (t == AT_.AT_FDCWD)
                         p += "AT_FDCWD "
@@ -773,13 +773,13 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                     break;
                 case L.SOCKFD:
                     t = rVal.toInt32();
-                    if (t >= 0)
+                    if (pContext.dxc.SOCKFD!=null &&  t >= 0)
                         p += `${t}  ${pContext.dxc.SOCKFD[t + ""]}  `;
                     p += rVal + " ";
                     break;
                 case L.WD:
                     t = rVal.toInt32();
-                    if (t >= 0)
+                    if (pContext.dxc.WD!=null && t >= 0)
                         p += `${t}  ${pContext.dxc.WD[t + ""]}  `;
                         p += rVal + " ";
                     break;
@@ -803,7 +803,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                     pContext.dxcOpts[pIndex] = rVal;
                     break;
                 case L.DSTRUCT:
-                    if(this.types[pFormat.f] != null){
+                    if(this.types!=null && this.types[pFormat.f] != null){
                         if (pContext.dxcOpts._extra == null) pContext.dxcOpts._extra = [];
                         pFormat.r = pIndex;
                         pFormat.v = rVal;
