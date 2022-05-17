@@ -1,0 +1,15 @@
+{
+  "compress": {
+    "defaults": true,
+    "dead_code": false
+  },
+  "sourceMap": {
+    "url": "inline"
+  },
+  "mangle": {
+    "module": false
+  },
+  "module": true,
+  "enclose": true,
+  "ecma": 2016
+}
