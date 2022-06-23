@@ -19,7 +19,6 @@ const MAP_ = DEF.MAP_;
 const X = DEF.X;
 const _ = TypedData.from;
 
-export const DSTRUCTS = {};
 
 // internal structs are always parsed
 export const IDSTRUCTS = {};
@@ -80,6 +79,7 @@ const A = {
     MQID: _({ t:T.INT32, n:"msqid" }),
     SEMID: _({ t:T.INT32, n:"semid" }),
     EPEV: _({t:T.POINTER64, n:"struct epoll_event *event", l:L.FLAG, f:X.EPOLL_EV}),
+    COUNT: _({t:T.UINT32, n:"count", l:L.SIZE}),
 
     POLLFD: _({ t:T.INT32, n:"*pollfd", l:L.DSTRUCT, f:"pollfd" }),
     KERNEL_TIMESPEC: _({t:T.POINTER64, n:"*__kernel_timespec", l:L.DSTRUCT, f:"__kernel_timespec"} ),
@@ -338,8 +338,8 @@ const SVC = [
     [192,"semtimedop",0xc0,[A.SEMID, A.SEMBUF,"unsigned nsops",A.CONST_KERNEL_TIMESPEC.copy("*timeout") ]],
     [193,"semop",0xc1,[A.SEMID, A.SEMBUF,"unsigned nsops"]],
     [194,"shmget",0xc2,["key_t key","size_t size","int flag"]],
-    [195,"shmctl",0xc3,["int shmid","int cmd", A.SHMIDDS ]],
-    [196,"shmat",0xc4,["int shmid","void *shmaddr","int shmflg"]],
+    [195,"shmctl",0xc3,[A.SEMID,"int cmd", A.SHMIDDS ]],
+    [196,"shmat",0xc4,[A.SEMID,"void *shmaddr","int shmflg"]],
     [197,"shmdt",0xc5,["void *shmaddr"]],
     [198,"socket",0xc6,[{t:T.INT32, n:"domain", l:L.FLAG, f:X.PF},{t:T.INT32, n:"type", l:L.FLAG, f:X.SOCK},"int"],A.SOCKFD.asReturn([/* TODO */])],
     [199,"socketpair",0xc7,["int","int","int","int *"]],
@@ -495,7 +495,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                     for(let s in pConfig.svc) this.onSupervisorCall(s, pConfig.svc[s]);
                     break;
                 case 'hvc':
-                    for(let s in pConfig.hvc) this.onHypervisorCall((s as any).parseInt(16), pConfig.hvc[s]);
+                    for(let s in pConfig.hvc) this.onHypervisorCall( parseInt(s as any, 16), pConfig.hvc[s]);
                     break;
                 case 'filter_name':
                     this.filter_name = pConfig.filter_name;
@@ -601,12 +601,12 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
             if(r != null){
                 if(r.file != null){
                     if(this.output.hidePackage!=null){
-                        l +=  `[${ r.file.path.replace(this.output.hidePackage, "HIDDEN")} +${pContext.pc.sub(r.base)}]`; ;
+                        l +=  `[${ r.file.path.replace(this.output.hidePackage, "HIDDEN")} +${pContext.pc.sub(r.base)}]`;
                     }else{
-                        l +=  `[${ r.file.path } +${pContext.pc.sub(r.base)}]`; ;
+                        l +=  `[${ r.file.path } +${pContext.pc.sub(r.base)}]`;
                     }
                 }else{
-                    l +=  `[${r.base} +${pContext.pc.sub(r.base)}]`; ;
+                    l +=  `[${r.base} +${pContext.pc.sub(r.base)}]`;
                 }
             }else{
                 l += `[<unknow>  lr=${pContext.lr}]`;
@@ -621,7 +621,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
 
     startOnLoad( pModuleRegExp:RegExp, pOptions:any = null):any {
         let self=this, do_dlopen = null, call_ctor = null, scopedTrace = null, extra = null, match=null;
-        let opts = pOptions;
+        //let opts = pOptions;
         Process.findModuleByName('linker64').enumerateSymbols().forEach(sym => {
             if (sym.name.indexOf('do_dlopen') >= 0) {
                 do_dlopen = sym.address;
@@ -646,8 +646,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                     this.out = args[0];
                     console.log( hexdump(this.out,{length:64}) );
                 },
-                onLeave: function(ret){
-
+                onLeave: function(){
                     //console.log( hexdump(this.out,{length:64}) );
                 }
             });
@@ -700,13 +699,16 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
         });
     }
 
+
+
     /**
      * To parse memory according to the structure defined by *pFormat*
      *
-     * @param pContext CPU context
-     * @param pFormat
+     * @param pContext
+     * @param pFormats
      * @param pPointer
-     * @method
+     * @param pSeparator
+     * @param pAlign
      */
     parseStruct( pContext:any, pFormats:TypedData[], pPointer:NativePointer, pSeparator:string ="\n", pAlign:boolean = false):string {
 
@@ -775,7 +777,6 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
             rVal = pValue;
             //p += ` ${pFormat.n} = `;
 
-            const f = pFormat.f;
 
             switch (pFormat.l) {
                 case L.DFD:
@@ -888,7 +889,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
     traceSyscall( pContext:any, pHookCfg:any = null){
 
         const sys = SVC_MAP_NUM[ pContext.x8.toInt32() ];
-        var inst = "SVC";
+        let inst = "SVC";
 
         if(sys==null) {
             console.log( ' ['+this.locatePC(pContext.pc)+']   \x1b[35;01m' + inst + ' ('+pContext.x8+')\x1b[0m Syscall=<unknow>');
@@ -897,7 +898,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
 
         pContext.dxcRET = sys[SVC_RET];
 
-        let s:string = "", p:string= "", t:any=null;
+        let s:string = "", p:string= "";
         pContext.dxcOpts = [];
         sys[3].map((vVal,vOff) => {
             //const rVal = pContext["x"+vOff];
@@ -1021,7 +1022,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
            ret = pContext.x0;
         }
 
-        console.log( pContext.log +'   > '+ret);0
+        console.log( pContext.log +'   > '+ret);
 
         // to process extra data such as structured data edited or passed as args
         if(pContext.dxcOpts != null && pContext.dxcOpts._extra){
