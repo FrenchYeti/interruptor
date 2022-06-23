@@ -183,9 +183,10 @@ export class LinuxX64InterruptorAgent extends InterruptorAgent{
     setupBuiltinHook(){
     }
 
-    locateEIP( pContext: any):string{
+    locateRIP( pContext: any):string{
         let l = "", tid:number =-1;
-        const r = Process.findRangeByAddress(pContext.eip);
+
+        const r = Process.findRangeByAddress(pContext.rip);
 
         if(this.output.tid) {
             tid = Process.getCurrentThreadId();
@@ -196,21 +197,21 @@ export class LinuxX64InterruptorAgent extends InterruptorAgent{
         if(this.output.module){
             if(r != null){
                 if(r.file != null){
-                    if(this.output.hidePackage!=null){
-                        l +=  `[${ r.file.path.replace(this.output.hidePackage, "HIDDEN")} +${pContext.eip.sub(r.base)}]`;
+                    if(this.output.hide!=null){
+                        l +=  `[${ r.file.path.replace(this.output.hide, "HIDDEN")} +${pContext.rip.sub(r.base)}]`;
                     }else{
-                        l +=  `[${ r.file.path } +${pContext.eip.sub(r.base)}]`;
+                        l +=  `[${ r.file.path } +${pContext.rip.sub(r.base)}]`;
                     }
                 }else{
-                    l +=  `[${r.base} +${pContext.eip.sub(r.base)}]`;
+                    l +=  `[${r.base} +${pContext.rip.sub(r.base)}]`;
                 }
             }else{
-             //   l += `[<unknow>  lr=${pContext.lr}]`;
+                l += `[<unknow>  rip=${pContext.rip}]`;
             }
         }
 
-        //if(this.output.lr)
-        //    l += `[lr=${pContext.lr}]`;
+        if(this.output.lr)
+            l += `[lr=${pContext.rip}]`;
 
         return l;
     }
@@ -488,7 +489,7 @@ export class LinuxX64InterruptorAgent extends InterruptorAgent{
         const sysSignature = SYSC_MAP_NUM[ sysNR.toInt32() ];
 
         if(sysSignature==null) {
-            console.log( ' ['+this.locateEIP(pContext)+']   \x1b[35;01m' + CC.OP + ' ('+sysNR+')\x1b[0m =<unknow>');
+            console.log( ' ['+this.locateRIP(pContext)+']   \x1b[35;01m' + CC.OP + ' ('+sysNR+')\x1b[0m =<unknow>');
             return;
         }
 
@@ -515,7 +516,7 @@ export class LinuxX64InterruptorAgent extends InterruptorAgent{
      * @param pSysNum
      */
     formatLogLine( pContext:any, pSysc:string, pInst:string, pSysNum:number):string {
-        let s = this.locateEIP(pContext);
+        let s = this.locateRIP(pContext);
         s += this.output.inst ?  `   \x1b[35;01m${pInst} :: ${pSysNum} \x1b[0m` : "";
         s += `   ${pSysc}`;
         return s;
@@ -651,6 +652,7 @@ export class LinuxX64InterruptorAgent extends InterruptorAgent{
 
             pStalkerInterator.putCallout(function(context) {
                 const n = context[CC.NR].toInt32();
+
                 if(context.dxc==null) context.dxc = {FD:{}};
                 if(isExcludedFn!=null && isExcludedFn(n)) return;
 
@@ -667,8 +669,10 @@ export class LinuxX64InterruptorAgent extends InterruptorAgent{
             pExtra.onLeave = null;
         }
 
+
         // debug
-        //console.log("["+pInstruction.address+" : "+pInstruction.address.sub(pExtra.mod.__mod.base)+"] > "+Instruction.parse(pInstruction.address));
+//        console.log("["+pInstruction.address+" : "+pInstruction.address.sub(pExtra.mod.__mod.base)+"] > "+Instruction.parse(pInstruction.address));
+        //console.log("["+pInstruction.address+"] > "+Instruction.parse(pInstruction.address));
 
         if (pInstruction.mnemonic === CC.OP) {
 

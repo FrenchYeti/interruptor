@@ -449,6 +449,7 @@ export class InterruptorAgent {
 
                 let threadExtra:any = pExtra;
                 threadExtra.hookAfter =  null;
+                threadExtra.onLeave =  null;
 
                 while ((instruction = iterator.next()) !== null) {
                     next = 1;
