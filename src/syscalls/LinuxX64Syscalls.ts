@@ -1,7 +1,7 @@
 
 // arguments template
 import {L, T} from "../common/Types";
-import * as DEF from "./LinuxX64Flags";
+import * as DEF from "../kernelapi/LinuxX64Flags";
 import {TypedData} from "../common/TypedData";
 
 

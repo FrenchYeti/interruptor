@@ -6,7 +6,7 @@
  */
 import {InterruptorGenericException} from "../common/InterruptorException";
 import {T, L} from  "../common/Types";
-import {X} from "../arch/LinuxX64Flags";
+import {X} from "../kernelapi/LinuxX64Flags";
 import {InterruptorAgent} from "../common/InterruptorAgent";
 import {AbstractInterruptorFactory} from "../common/AbstractInterruptorFactory";
 import {Utils} from "../common/Utils";

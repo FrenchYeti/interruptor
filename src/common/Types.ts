@@ -1,5 +1,3 @@
-import {IDSTRUCTS} from "../arch/LinuxArm64InterruptorAgent";
-
 export enum L {
     PATH,
     SIZE,

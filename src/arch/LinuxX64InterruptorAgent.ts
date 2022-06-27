@@ -1,9 +1,9 @@
 import {F, InterruptorAgent} from "../common/InterruptorAgent";
 import {InterruptorGenericException} from "../common/InterruptorException";
 import {T,L} from "../common/Types";
-import * as DEF from "./LinuxX64Flags";
+import * as DEF from "../kernelapi/LinuxX64Flags";
 import {TypedData} from "../common/TypedData";
-import {SYSC} from "./LinuxX64Syscalls";
+import {SYSC} from "../syscalls/LinuxX64Syscalls";
 
 // GPR = Global Purpose Register prefix => x/r
 const GPR = "e";
