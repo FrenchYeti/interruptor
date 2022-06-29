@@ -24,6 +24,7 @@ It provides by default some useful features such as :
 * Coverage generation
 
 
+
 ## 1. How to use
 
 In fact, install is not necessary. Just include the released minified JS file corresponding to your target os/arch into your Frida agent's script. Or call it throuh Frida's Codeshare.
@@ -165,7 +166,8 @@ Interruptor.newAgentTracer({
 ## 3. Supports
 
 **Architectures**
-* ARM64 : SVC (syscall), HVC (hypervisor)
+* Aarch64 : SVC (syscall), HVC (WiP, hypervisor)
+* x64 : SYSCALL
 
 **APIs**
 * Linux kernel API (syscall)
