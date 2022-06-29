@@ -1,5 +1,7 @@
 # interruptor
 
+![ci](https://github.com/FrenchYeti/interruptor/workflows/ci/badge.svg)
+
 *Work In Progess*
 
 The home for Interruptor, a human-friendly interrupts hook library based on Frida's Stalker
