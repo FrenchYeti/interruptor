@@ -1,6 +1,6 @@
 name: ci
 on:
-  release
+  release:
     types: [published]
 
 jobs:
