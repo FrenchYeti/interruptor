@@ -1,4 +1,4 @@
-# interruptor
+# Interruptor
 
 ![ci](https://github.com/FrenchYeti/interruptor/workflows/ci/badge.svg)
 
