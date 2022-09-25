@@ -3,6 +3,12 @@
   "version": "1.0.0",
   "description": "A Frida-based library for hook system call (and interrupts) and produce strace-like output ",
   "main": "index.ts",
+  "files": [
+    "src/**/*.d.ts",
+    "src/**/*.js",
+    "*.js",
+    "*.d.ts"
+  ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

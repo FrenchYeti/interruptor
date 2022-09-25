@@ -4,7 +4,7 @@
     "target": "es2017", // es2017
     "module": "commonjs",
     "declaration": true,
-    "outDir": "./dist",
+    "outDir": ".",
     "removeComments": true,
     "sourceMap": false,
     "typeRoots": [
