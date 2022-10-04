@@ -699,4 +699,10 @@ export class LinuxAarch32InterruptorAgent extends InterruptorAgent{
 
         return keep;
     }
+
+
+
+    printStats(){
+        super.printStats(SWI);
+    }
 }

@@ -1,4 +1,5 @@
 import {CoverageAgent} from "../utilities/Coverage";
+import {L} from "./Types";
 
 let CTR = 0;
 
@@ -49,7 +50,7 @@ export class InterruptorAgent {
 
     debug:boolean = false;
 
-    types:any = null;
+    types:any = {};
 
     /**
      * Filter type : include, equal, exclude
@@ -494,6 +495,61 @@ export class InterruptorAgent {
         if(this._do_ft !== null){
             this._do_ft(this);
         }
+    }
+
+    /**
+     * To print statistics about implementation
+     *
+     * @param pSyscallList
+     */
+    printStats( pSyscallList:any[] = null){
+        const stats = { handlers:0, err:0, atot:0, untyped:0, todo:0, struct:0 };
+        const types = {};
+
+        // list partially implemented syscall
+        let msgPart = "\t - ";
+
+        stats.handlers = pSyscallList.length;
+        pSyscallList.map((sc)=>{
+            let impl=true;
+            let arg:any = null;
+
+            if(sc[4]!=null && sc[4].e!=null && sc[4].e.length>0) stats.err++;
+            for(let i=0; i<sc[3].length; i++){
+                arg = sc[3][i];
+                // detect args not typed
+                if(typeof (arg)==="string"){ impl=false; break;}
+                // detect structure not supported
+                if(arg.l != null && arg.l==L.DSTRUCT){
+                    if(types[arg.f]==null)
+                        types[arg.f]=1;
+                    else
+                        types[arg.f]++;
+                }
+            }
+            stats.untyped += (!impl ? 1: 0);
+
+            if(!impl){
+                stats.untyped++;
+                msgPart += ` ${sc[1]}, `;
+            }
+        });
+
+        // list not implemented structures
+        let msgImpl = "\t - ";
+        const notImpl=[];
+        for(const s in types){
+            if(this.types[s]==null){
+                notImpl.push(s);
+                msgImpl += ` ${s} (${types[s]}), `;
+            }
+        }
+
+        console.log(`System calls : ${pSyscallList.length}
+Support primitive args parsing : ${pSyscallList.length - stats.untyped}/${pSyscallList.length} \n ${msgPart} \n\n 
+Support struct args implemented : ${notImpl.length}/${Object.keys(types).length} \n ${msgImpl} \n\n
+Support err code : ${stats.err}/${pSyscallList.length}
+        `)
     }
 
 }

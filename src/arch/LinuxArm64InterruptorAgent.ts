@@ -677,4 +677,8 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
 
         return keep;
     }
+
+    printStats(){
+        super.printStats(SVC);
+    }
 }

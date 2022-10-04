@@ -697,4 +697,8 @@ export class LinuxX64InterruptorAgent extends InterruptorAgent{
 
         return keep;
     }
+
+    printStats(){
+        super.printStats(SYSC);
+    }
 }
