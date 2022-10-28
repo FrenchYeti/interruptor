@@ -42,28 +42,32 @@ frida --codeshare FrenchYeti/android-arm64-strace -f YOUR_BINARY
 ```
 
 
-### 1.A From latest release
+### 1.A From latest release (for version <= 0.2)
 
 **Requirements :**
 
 * frida
-* frida-compile
 
 Donwload [latest release](https://github.com/FrenchYeti/interruptor/releases) for your architecture into your working directory, 
 and do:
 
 ```
-var Interruptor = require('./android-arm64-strace.min.js').target.LinuxArm64();
+import target from './index.linux.arm64.js';
+import {DebugUtils} from "./src/common/DebugUtils.js";
 
-// better results, when app is loaded
-Java.perform(()=>{
-    Interruptor.newAgentTracer({
-        exclude: {
-            modules: ["linker64"],
-            syscalls: ["clock_gettime"]
+const Interruptor = target.LinuxArm64({});
+
+Interruptor.newAgentTracer({
+    followThread: true,
+    scope: {
+        syscalls: {
+            exclude:  [/clock_gettime/]
+        },
+        modules: {
+            exclude: [/linker/]
         }
-    }).start();
-});
+    }
+}).start();
 ```
 
 Time to deploy hooks can be configured to be when a particular library is loaded. See options below.
@@ -73,21 +77,22 @@ Time to deploy hooks can be configured to be when a particular library is loaded
 **Requirements :**
 
 * frida
-* frida-compile
-* TS compiler
 
 Only from source for now (will move to NPM ASAP)
 ```
 git clone https://github.com/FrenchYeti/interruptor
 cd interruptor
 npm install
-npx tsc && npx webpack --config webpack.android.arm64.config.js 
-frida-compile examples/simple_strace.js -o trace.js && frida -U -f <PACKAGE> -l trace.js
+```
+
+And finally :
+```
+frida -U -l ./examples/simple_strace.ts -f <PACKAGE> 
 ```
 
 ## 2. Examples
 
-### 2.A Simple tracing
+### 2.A Simple tracing (<=0.2)
 Simple tracing without hook from attach moment, with excluded module and syscall (by name)
 ```
 var Interruptor = require('./android-arm64-strace.min.js').target.LinuxArm64();
