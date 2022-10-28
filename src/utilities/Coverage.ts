@@ -1,5 +1,12 @@
-import {InterruptorAgent} from "../common/InterruptorAgent";
+import {InterruptorAgent} from "../common/InterruptorAgent.js";
 
+
+export interface CoverageEvent {
+    offset: number;
+    length: number;
+    moduleId: number;
+    [key: string]:any;
+}
 
 export class CoverageAgent {
 
@@ -77,26 +84,26 @@ export class CoverageAgent {
      */
     static EVENT_TOTAL_SIZE = 8;
 
-    enabled:boolean = false;
-    interruptor:InterruptorAgent = null;
-    flavor:string = "dr";
-    fname:string = null; // "drcov.dat";
-    events: Map<number,number> = new Map();
+    enabled = false;
+    interruptor:InterruptorAgent;
+    flavor = "dr";
+    fname = "drcov.dat"; // "drcov.dat";
+    events: Map<NativePointer,NativePointer> = new Map();
     threads: any[] = [];
-    onCoverage: any = ()=>{};
+    onCoverage: any = ()=>{ /* */ };
     out:any = null;
     stops: any = {count: Infinity};
 
 
 
 
-    constructor( pInterruptor:any) {
+    constructor( pInterruptor:InterruptorAgent) {
         this.interruptor = pInterruptor;
     }
 
     static from( pConfig:any, pInterruptor:any):CoverageAgent {
         const agent = new CoverageAgent(pInterruptor);
-        for(let i in pConfig){
+        for(const i in pConfig){
             switch(i){
                 case 'fname':
                     agent.fname = pConfig.fname;
@@ -137,11 +144,20 @@ export class CoverageAgent {
 
     }
 
-    processStalkerEvent( pEvent:any) {
+    castToNativePointer( pData:NativePointer|string|number):NativePointer{
+        if((typeof pData === "string")||(typeof pData === "number")){
+            return ptr(pData);
+        }else{
+            return pData;
+        }
+    }
+
+    processStalkerEvent( pEvent: StalkerEventFull | StalkerEventBare) {
         const type = pEvent[CoverageAgent.COMPILE_EVENT_TYPE_INDEX];
         if (type.toString() === CoverageAgent.COMPILE_EVENT_TYPE.toString()) {
-            const start = pEvent[CoverageAgent.COMPILE_EVENT_START_INDEX];
-            const end = pEvent[CoverageAgent.COMPILE_EVENT_END_INDEX];
+            const start = this.castToNativePointer( pEvent[CoverageAgent.COMPILE_EVENT_START_INDEX]);
+            const end = this.castToNativePointer( pEvent[CoverageAgent.COMPILE_EVENT_END_INDEX]);
+
             this.events.set(start, end);
 
             /*if(this.isStepReached()){
@@ -170,7 +186,7 @@ export class CoverageAgent {
      * @param data The string to convert
      * @returns An array buffer containing the raw string data
      */
-    static convertString(data) {
+    static convertString(data:string) :ArrayBuffer {
         const buf = new ArrayBuffer(data.length);
         const view = new Uint8Array(buf);
         for (let i = 0; i < data.length; i += 1) {
@@ -187,7 +203,7 @@ export class CoverageAgent {
      * @param pad The value which should be prepended to the string until it is the requested length
      * @returns The padded input string, padding to the requested length
      */
-    static padStart(data, length, pad) {
+    static padStart(data:string, length:number, pad:string):string {
         const paddingLength = length - data.length;
         const partialPadLength = paddingLength % pad.length;
         const fullPads = paddingLength - partialPadLength / pad.length;
@@ -202,7 +218,7 @@ export class CoverageAgent {
      * @param address The address at which to write the value
      * @param value The value to be written
      */
-    static write16le(address, value) {
+    static write16le(address:NativePointer, value:number) :void{
         let i;
         for (i = 0; i < CoverageAgent.BYTES_PER_U16; i += 1) {
             // tslint:disable-next-line:no-bitwise
@@ -218,7 +234,7 @@ export class CoverageAgent {
      * @param address The address at which to write the value
      * @param value The value to be written
      */
-    static write32le(address, value) {
+    static write32le(address:NativePointer, value:number):void {
         let i;
         for (i = 0; i < CoverageAgent.BYTES_PER_U32; i += 1) {
             // tslint:disable-next-line:no-bitwise
@@ -230,7 +246,7 @@ export class CoverageAgent {
     /**
      * Stop the collection of coverage data
      */
-    stop() {
+    stop():void {
         /*
         this.threads.forEach((t) => {
             Stalker.unfollow(t.id);
@@ -261,7 +277,7 @@ export class CoverageAgent {
      * @param start The address of the start of the compiled block.
      * @param end The address of the end of the compile block.
      */
-    convertEvent(start, end) {
+    convertEvent(start:NativePointer, end:NativePointer):any {
         for (let i = 0; i < this.interruptor.modules.length; i += 1) {
             const base = this.interruptor.modules[i].base;
             const size = this.interruptor.modules[i].size;
@@ -294,7 +310,7 @@ export class CoverageAgent {
      *
      * @param event The event to emit
      */
-    emitEvent(event) {
+    emitEvent(event:CoverageEvent) {
         /*
          * struct {
          *     guint32 start;
@@ -316,7 +332,7 @@ export class CoverageAgent {
      * changes may be required for IDA lighthouse to accept this modification.
      * @param events The number of coverage events emitted in the file
      */
-    emitHeader(events) {
+    emitHeader(events:number) {
         this.emit(CoverageAgent.convertString("DRCOV VERSION: 2\n"));
         this.emit(CoverageAgent.convertString("DRCOV FLAVOR: frida\n"));
         this.emit(CoverageAgent.convertString(`Module Table: version 2, count ${this.interruptor.modules.length}\n`));
@@ -333,7 +349,7 @@ export class CoverageAgent {
      * @param idx The index of the module
      * @param module The module information
      */
-    emitModule(idx, module) {
+    emitModule(idx:number, module:Module) {
         const moduleId = CoverageAgent.padStart(idx.toString(), CoverageAgent.COLUMN_WIDTH_MODULE_ID, " ");
         let base = module.base
             .toString(16);
@@ -357,7 +373,7 @@ export class CoverageAgent {
      * @param start The start of the basic block
      * @param end The end of the basic block
      */
-    isInRange(base, start, end) {
+    isInRange(base:NativePointer, start:NativePointer, end:NativePointer) {
         const ranges = this.interruptor.ranges.get(base);
         if (ranges === undefined) {
             return false;

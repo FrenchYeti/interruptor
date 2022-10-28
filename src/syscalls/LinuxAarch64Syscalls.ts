@@ -1,6 +1,7 @@
-import * as DEF from "../kernelapi/LinuxArm64Flags";
-import {TypedData} from "../common/TypedData";
-import {L, T} from "../common/Types";
+import * as DEF from "../kernelapi/LinuxArm64Flags.js";
+import {TypedData} from "../common/TypedData.js";
+import {L, T} from "../common/Types.js";
+import {SyscallSignature} from "./ISyscall.js";
 
 const E = DEF.E;
 const X = DEF.X;
@@ -39,6 +40,7 @@ const A = {
     UID: _({t:T.UINT32, n:"user", l:L.UID }),
     GID: _({t:T.UINT32, n:"group", l:L.GID }),
     SIG: _({t:T.INT32, n:"sig", l:L.FLAG, f:X.SIG   }),
+    SIGSET: _({t:T.POINTER64, n:"*sigset", l:L.FLAG, f:X.SIG   }),
     TID: _({t:T.INT32, n:"thread" }),
     CALLER_TID: _({t:T.INT32, n:"caller_tid" }),
     PTR: _({t:T.POINTER64, n:"value"}),
@@ -114,6 +116,7 @@ const A = {
 A.SIGMASK.update({ f:A.SIG, len:16 });
 
 const RET:any = {
+    FAULT: {t:T.INT32, e:[E.EFAULT]},
     INFO: {t:T.INT32, e:[E.EAGAIN,E.EINVAL,E.EPERM]},
     ACCESS: {t:T.INT32, e:[E.EACCES, E.EFAULT, E.EINVAL, E.ELOOP, E.ENAMETOOLONG, E.ENOENT, E.ENOMEM, E.ENOTDIR, E.EOVERFLOW, E.EIO, E.ETXTBSY, E.EROFS]},
     STAT: {t:T.INT32, e:[E.EACCES, E.EBADF, E.EFAULT, E.EINVAL, E.ELOOP, E.ENAMETOOLONG, E.ENOENT, E.ENOMEM, E.ENOTDIR, E.EOVERFLOW]},
@@ -129,9 +132,10 @@ RET.RM_XATTR = {t:T.INT32, e:RET.STAT.e.concat([E.ENOTSUP, E.ERANGE]) };
 RET.OPENAT = {t:T.INT32, n:'FD', l:L.FD, r:1, e:RET.OPEN.e.concat([E.EBADF, E.ENOTDIR]) };
 RET.LINKAT = {t:T.INT32, e:RET.LINK.e.concat([E.EBADF, E.ENOTDIR]) };
 RET.IO = {t:T.INT32, e:RET.INFO.e.concat([E.EBADF, E.EFAULT, E.ENOSYS]) };
+RET.PID = {t:T.INT32, n:'PID', l:L.PID, e:[] };
 
 
-export const SVC = [
+export const SVC:SyscallSignature[] = [
     [0,"io_setup",0x00,[{t:T.UINT32, n:"nr_reqs"},{t:T.POINTER64, n:"aio_context_t *ctx"}]],
     [1,"io_destroy",0x01,[A.AIO],RET.IO],
     [2,"io_submit",0x02,[A.AIO,{t:T.LONG, n:"nr"},{t:T.POINTER64, n:"struct iocb **iocbpp"}],RET.IO],
@@ -154,7 +158,7 @@ export const SVC = [
     [19,"eventfd2",0x13,[{t:T.UINT32, n:"count"} ,{t:T.INT32, n:"flags"}]],
     [20,"epoll_create1",0x14,[{t:T.INT32, n:"flags", l:L.FLAG, f:X.EPOLL_FLAG}]],
     [21,"epoll_ctl",0x15,[A.EPFD,{t:T.UINT32, n:"op", l:L.FLAG, f:X.EPOLL_CTL},A.FD,A.EPEV]],
-    [22,"epoll_pwait",0x16,[A.EPFD,A.EPEV,{t:T.INT32, n:"maxevents"},{t:T.INT32, n:"timeout"},{t:T.POINTER64, n:"const sigset_t *sigmask", c:true }]],
+    [22,"epoll_pwait",0x16,[A.EPFD,A.EPEV,{t:T.INT32, n:"maxevents"},{t:T.INT32, n:"timeout"},A.SIGSET.copy("*sigmask").constant(true) ]],
     [23,"dup",0x17,[A.FD],{t:T.UINT32, n:"fd", l:L.FD, e:[E.EBADF, E.EBUSY, E.EINTR, E.EINVAL, E.EMFILE]}],
     [24,"dup3",0x18,[{t:T.UINT32, n:"old_fd", l:L.FD},{t:T.UINT32, n:"old_fd", l:L.FD}, {t:T.INT32, n:"flags", l:L.FLAG}],{t:T.UINT32, n:"fd", l:L.FD, e:[E.EBADF, E.EBUSY, E.EINTR, E.EINVAL, E.EMFILE]}],
     [25,"fcntl",0x19,[A.FD,{t:T.UINT32, n:"cmd", l:L.FLAG, f:X.FNCTL} ,{t:T.ULONG, n:"args", l:L.FLAG, r:"x1", f:X.FCNTL_ARGS}], {t:T.INT32, n:"ret", r:"x1", l:L.FLAG, f:X.FCNTL_RET}],
@@ -174,7 +178,7 @@ export const SVC = [
     [39,"umount2",0x27,[A.CONST_PATH /* target */,{t:T.INT32, n:"flags", l:L.FLAG, f:X.UMOUNT, c:true}]],
     [40,"mount",0x28,[ A.STR.copy("dev_name"), A.STR.copy("dir_name"), A.STR.copy("type"),{t:T.ULONG, n:"flags", l:L.FLAG, f:X.MOUNT_FLAG},{t:T.POINTER64, n:"*dat"}]],
     [41,"pivot_root",0x29,[A.CONST_NAME.copy("new_root"),A.CONST_NAME.copy("put_old")]],
-    [42,"nfsservctl",0x2a,["REMOVED int cmd", "struct nfsctl_arg *argp","union nfsctl_res *resp"]], // REMOVED since 3.1
+    [42,"nfsservctl",0x2a,[{t:T.INT32, n:"REMOVED cmd"}, {t:T.POINTER64, n:"struct nfsctl_arg *argp"} , {t:T.POINTER64, n:"union nfsctl_res *resp"} ]], // REMOVED since 3.1
     [43,"statfs",0x2b,[A.CONST_PATH,{t:T.POINTER64, n:"statfs *buf", l:L.DSTRUCT, f:"statfs"}]],
     [44,"fstatfs",0x2c,[A.FD,{t:T.POINTER64, n:"statfs *buf", l:L.DSTRUCT, f:"statfs"}]],
     [45,"truncate",0x2d,[A.CONST_PATH, A.SIGNED_LEN]],
@@ -204,9 +208,9 @@ export const SVC = [
     [69,"preadv",0x45,[A.FD,A.IOVEC,A.SIZE.copy('iovcnt'),A.LOFFSET]],
     [70,"pwritev",0x46,[A.FD,A.IOVEC,A.SIZE.copy('iovcnt'),A.LOFFSET]],
     [71,"sendfile",0x47,[A.FD.copy("out_fd"),A.FD.copy("in_fd"),A.OFFSET,A.SIZE]],
-    [72,"pselect6",0x48,[{t:T.INT32, n:"nfds"},A.FD_SET.copy("readfds"),A.FD_SET.copy("writefds"),A.FD_SET.copy("exceptfds"),A.KERNEL_TIMESPEC,"const sigset_t *sigmask"]],
-    [73,"ppoll",0x49,[A.POLLFD,A.SIZE.copy("nfds"),A.KERNEL_TIMESPEC,"const sigset_t sigmask*"]],
-    [74,"signalfd4",0x4a,[A.FD,"sigset_t *user_mask",A.SIZE.copy("sizemask"),{ t:T.INT32, n:"flags", l:L.FLAG, f:X.SFD}]],
+    [72,"pselect6",0x48,[{t:T.INT32, n:"nfds"},A.FD_SET.copy("readfds"),A.FD_SET.copy("writefds"),A.FD_SET.copy("exceptfds"),A.KERNEL_TIMESPEC,A.SIGSET.copy("*sigmask").constant(true)]],
+    [73,"ppoll",0x49,[A.POLLFD,A.SIZE.copy("nfds"),A.KERNEL_TIMESPEC,A.SIGSET.copy("*sigmask").constant(true)]],
+    [74,"signalfd4",0x4a,[A.FD,A.SIGSET.copy("*user_mask"),A.SIZE.copy("sizemask"),{ t:T.INT32, n:"flags", l:L.FLAG, f:X.SFD}]],
     [75,"vmsplice",0x4b,[A.FD,A.IOVEC,A.LEN.copy("nr_segs"),{ t:T.UINT32, n:"flags", l:L.FLAG, f:X.SPLICE}]],
     [76,"splice",0x4c,[{t:T.UINT32, n:"fd_in", l:L.FD},A.LOFFSET.copy('*off_in'),{t:T.UINT32, n:"fd_out", l:L.FD},A.LOFFSET.copy('*off_out'),A.SIZE,"unsigned int flags["]],
     [77,"tee",0x4d,[{t:T.UINT32, n:"fd_in", l:L.FD},{t:T.UINT32, n:"fd_out", l:L.FD},"size_t len","unsigned int flags"]],
@@ -265,16 +269,16 @@ export const SVC = [
     [130,"tkill",0x82,[A.PID,A.SIG]],
     [131,"tgkill",0x83,[{t:T.INT32, n:"thread_grp", l:L.PID },A.PID,A.SIG]],
     [132,"sigaltstack",0x84,[A.SIGALSTACK.copy("uss").constant(),A.SIGALSTACK.copy("uoss").constant()]],
-    [133,"rt_sigsuspend",0x85,["sigset_t *unewset",A.SIZE.copy("sigsetsize")]],
+    [133,"rt_sigsuspend",0x85,[A.SIGSET.copy("*unewset"),A.SIZE.copy("sigsetsize")]],
     [134,"rt_sigaction",0x86,[A.SIG, A.SIGACTION.copy().constant(),A.SIGACTION,A.SIZE]],
-    [135,"rt_sigprocmask",0x87,[{ t:T.INT32, n:"how", l:L.FLAG, f:X.SIG_FLAGS},"sigset_t *set","sigset_t *oset","size_t sigsetsize"]],
-    [136,"rt_sigpending",0x88,["sigset_t *set",A.SIZE.copy("sigsetsize")]],
-    [137,"rt_sigtimedwait",0x89,[ "const sigset_t *uthese", A.SIGINFO ,A.CONST_KERNEL_TIMESPEC.copy("*uts"),"size_t sigsetsize"]],
+    [135,"rt_sigprocmask",0x87,[{ t:T.INT32, n:"how", l:L.FLAG, f:X.SIG_FLAGS},A.SIGSET.copy("*set"),A.SIGSET.copy("*oset"), A.SIZE.copy("sigsetsize")]],
+    [136,"rt_sigpending",0x88,[A.SIGSET.copy("*set"),A.SIZE.copy("sigsetsize")]],
+    [137,"rt_sigtimedwait",0x89,[ A.SIGSET.copy("*uthese").constant(true), A.SIGINFO ,A.CONST_KERNEL_TIMESPEC.copy("*uts"), A.SIZE.copy("sigsetsize")]],
     [138,"rt_sigqueueinfo",0x8a,[A.PID,A.SIG, A.SIGINFO ]],
     [139,"rt_sigreturn",0x8b,[]],
     [140,"setpriority",0x8c,[A.IOPRIO_WHICH,{t:T.INT32, n:"who"},{t:T.INT32, n:"ioprio"}]],
     [141,"getpriority",0x8d,[A.IOPRIO_WHICH,{t:T.INT32, n:"who"}]],
-    [142,"reboot",0x8e,["int magic1","int magic2","unsigned int cmd","void *arg"]],
+    [142,"reboot",0x8e,[{ t:T.INT32, n:"magic1"}, { t:T.INT32, n:"magic2"}, { t:T.UINT32, n:"cmd"}, { t:T.POINTER64, n:"*arg"}]],
     [143,"setregid",0x8f,[A.GID.copy("rgid"),A.GID.copy("egid")]],
     [144,"setgid",0x90,[A.GID],RET.INFO],
     [145,"setreuid",0x91,[{t:T.UINT32, n:"real_user", l:L.UID},{t:T.UINT32, n:"effective_user", l:L.UID}],RET.INFO],
@@ -299,23 +303,23 @@ export const SVC = [
     [164,"setrlimit",0xa4,[A.RES, A.RLIMIT]],
     [165,"getrusage",0xa5,[{t:T.INT32, n:"who", l:L.ATTRMODE, f:X.RUSAGE},A.RUSAGE]],
     [166,"umask",0xa6,[{t:T.UINT32, n:"mask", l:L.ATTRMODE, f:X.ATTR}]],
-    [167,"prctl",0xa7,[{t:T.INT32, n:"opt", l:L.FLAG, f:X.PRCTL_OPT},"unsigned long arg2","unsigned long arg3","unsigned long arg4","unsigned long arg5"]],
-    [168,"getcpu",0xa8,["unsigned *cpu","unsigned *node",A.GPU_CACHE]],
-    [169,"gettimeofday",0xa9,[A.TIMEVAL, A.TIMEZONE]],
-    [170,"settimeofday",0xaa,[A.TIMEVAL, A.TIMEZONE]],
+    [167,"prctl",0xa7,[{t:T.INT32, n:"opt", l:L.FLAG, f:X.PRCTL_OPT}, { t:T.ULONG, n:"arg2"}, { t:T.ULONG, n:"arg3"}, { t:T.ULONG, n:"arg4"}, { t:T.ULONG, n:"arg5"}]],
+    [168,"getcpu",0xa8,[{t:T.POINTER64, n:" *cpu" },{t:T.POINTER64, n:" *node" },A.GPU_CACHE],RET.FAULT ],
+    [169,"gettimeofday",0xa9,[A.TIMEVAL, A.TIMEZONE],RET.INFO],
+    [170,"settimeofday",0xaa,[A.TIMEVAL, A.TIMEZONE],RET.INFO],
     [171,"adjtimex",0xab,[A.KTIMEX]],
-    [172,"getpid",0xac,[],A.PID],
-    [173,"getppid",0xad,[],A.PID],
-    [174,"getuid",0xae,[],A.UID],
-    [175,"geteuid",0xaf,[],A.UID],
-    [176,"getgid",0xb0,[],A.GID],
-    [177,"getegid",0xb1,[],A.GID],
-    [178,"gettid",0xb2,[]],
-    [179,"sysinfo",0xb3,[A.SYSINFO]],
+    [172,"getpid",0xac,[],A.PID.asReturn()],
+    [173,"getppid",0xad,[],A.PID.asReturn()],
+    [174,"getuid",0xae,[],A.UID.asReturn()],
+    [175,"geteuid",0xaf,[],A.UID.asReturn()],
+    [176,"getgid",0xb0,[],A.GID.asReturn()],
+    [177,"getegid",0xb1,[],A.GID.asReturn()],
+    [178,"gettid",0xb2,[],A.PID.asReturn()],
+    [179,"sysinfo",0xb3,[A.SYSINFO], RET.FAULT],
     [180,"mq_open",0xb4,[A.CONST_NAME,A.OFLAGS,A.OMODE, A.MQ_ATTR]],
     [181,"mq_unlink",0xb5,[A.CONST_NAME]],
-    [182,"mq_timedsend",0xb6,[A.MQD,A.CONST_NAME.copy("*msg_ptr"),A.SIZE.copy("msg_len"),"unsigned int msg_prio",A.CONST_KERNEL_TIMESPEC.copy("*abs_timeout") ]],
-    [183,"mq_timedreceive",0xb7,[A.MQD,A.OUTPUT_CHAR_BUFFER.copy("*msg_ptr"),A.SIZE.copy("msg_len"),"unsigned int *msg_prio",A.CONST_KERNEL_TIMESPEC.copy("*abs_timeout")  ]],
+    [182,"mq_timedsend",0xb6,[A.MQD,A.CONST_NAME.copy("*msg_ptr"),A.SIZE.copy("msg_len"),{ t:T.UINT32, n:"msg_prio"},A.CONST_KERNEL_TIMESPEC.copy("*abs_timeout") ]],
+    [183,"mq_timedreceive",0xb7,[A.MQD,A.OUTPUT_CHAR_BUFFER.copy("*msg_ptr"),A.SIZE.copy("msg_len"),{ t:T.POINTER64, n:"*msg_prio"} ,A.CONST_KERNEL_TIMESPEC.copy("*abs_timeout")  ]],
     [184,"mq_notify",0xb8,[A.MQD, A.SIGEVENT.copy().constant()]],
     [185,"mq_getsetattr",0xb9,[A.MQD, A.MQ_ATTR.copy("*mqstat").constant(),A.MQ_ATTR.copy("*omqstat" )]],
     [186,"msgget",0xba,["key_t key",{t:T.INT32, n:"msgflg", l:L.FLAG, f:X.MSGF}]],

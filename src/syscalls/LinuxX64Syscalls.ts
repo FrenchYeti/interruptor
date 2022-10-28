@@ -1,8 +1,8 @@
 
 // arguments template
-import {L, T} from "../common/Types";
-import * as DEF from "../kernelapi/LinuxX64Flags";
-import {TypedData} from "../common/TypedData";
+import {L, T} from "../common/Types.js";
+import * as DEF from "../kernelapi/LinuxX64Flags.js";
+import {TypedData} from "../common/TypedData.js";
 
 
 const E = DEF.E;

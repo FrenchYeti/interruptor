@@ -1,6 +1,6 @@
-import * as DEF from "../kernelapi/LinuxArm64Flags";
-import {TypedData} from "../common/TypedData";
-import {L, T} from "../common/Types";
+import * as DEF from "../kernelapi/LinuxArm64Flags.js";
+import {TypedData} from "../common/TypedData.js";
+import {L, T} from "../common/Types.js";
 
 const E = DEF.E;
 const X = DEF.X;

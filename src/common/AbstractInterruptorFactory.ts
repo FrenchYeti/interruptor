@@ -5,12 +5,13 @@
  *
  *  @class
  */
-import {TypeDef, TypeDefList} from "./TypeDef";
+import {TypeDef, TypeDefList} from "./TypeDef.js";
+import {InterruptorAgent} from "./InterruptorAgent";
 
 
 export abstract class AbstractInterruptorFactory {
 
-    typeDefs:TypeDefList;
+    typeDefs:TypeDefList = {};
     opts:any = null;
     static _tcolors: number[] = [0];
 
@@ -26,8 +27,8 @@ export abstract class AbstractInterruptorFactory {
      * @param pPadding
      *
      */
-    static toByteArray(pString:string, pSize:number=-1, pPadding:number = 0):number[] {
-        let arr:number[] = pString.split('').map( c => c.charCodeAt(0));
+    static toByteArray(pString:string, pSize=-1, pPadding = 0):number[] {
+        const arr:number[] = pString.split('').map( c => c.charCodeAt(0));
         if(pSize>-1 && pSize>pString.length){
             do{ arr.push(pPadding) }while(arr.length < pSize-1);
         }
@@ -36,6 +37,10 @@ export abstract class AbstractInterruptorFactory {
 
     static printBackTrace(pContext:any):void {
         console.log(Thread.backtrace(pContext, Backtracer.ACCURATE).map(DebugSymbol.fromAddress).join('\n') + '\n');
+    }
+
+    static replaceHook( pSyscallName:string, pNewHooks:any ):void {
+        // todo : replace + Stalker.invalidate()
     }
 
     constructor(pOptions:any) {
@@ -59,9 +64,9 @@ export abstract class AbstractInterruptorFactory {
         // this.output._threads[tid] = this._pickThreadColor();
     }
 
-    abstract newAgentTracer(pConfig:any);
+    abstract newAgentTracer(pConfig:any):InterruptorAgent;
 
-    abstract newStandaloneTracer(pConfig:any);
+    //abstract newStandaloneTracer(pConfig:any):InterruptorAgent;
 
     getOptions():any {
         return this.opts;
@@ -70,7 +75,7 @@ export abstract class AbstractInterruptorFactory {
     newTypeDefinition(pTypes:any):TypeDefList {
         this.typeDefs = {};
 
-        for(let i in pTypes){
+        for(const i in pTypes){
             this.typeDefs[i] = new TypeDef(pTypes[i]);
         }
 

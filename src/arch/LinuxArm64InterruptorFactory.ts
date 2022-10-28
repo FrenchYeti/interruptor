@@ -4,12 +4,13 @@
  @copyright Reversense SAS
 
  */
-import {InterruptorGenericException} from "../common/InterruptorException";
-import {T, L} from  "../common/Types";
-import {X} from "../kernelapi/LinuxArm64Flags";
-import {InterruptorAgent} from "../common/InterruptorAgent";
-import {AbstractInterruptorFactory} from "../common/AbstractInterruptorFactory";
-import {LinuxArm64InterruptorAgent, KAPI} from "./LinuxArm64InterruptorAgent";
+import {T, L} from  "../common/Types.js";
+import {X} from "../kernelapi/LinuxArm64Flags.js";
+import {InterruptorAgent} from "../common/InterruptorAgent.js";
+import {AbstractInterruptorFactory} from "../common/AbstractInterruptorFactory.js";
+import {LinuxArm64InterruptorAgent, KAPI} from "./LinuxArm64InterruptorAgent.js";
+import {SVC} from "../syscalls/LinuxAarch64Syscalls.js";
+
 
 
 function deepCopy(pSrcObject:any): any {

@@ -1,3 +1,9 @@
+export enum F {
+    EXCLUDE_ANY,
+    INCLUDE_ANY,
+    FILTER
+}
+
 export enum L {
     PATH,
     SIZE,

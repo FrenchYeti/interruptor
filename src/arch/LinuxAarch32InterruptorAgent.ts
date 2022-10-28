@@ -1,9 +1,9 @@
-import {F, InterruptorAgent} from "../common/InterruptorAgent";
-import {InterruptorGenericException} from "../common/InterruptorException";
-import {T,L} from "../common/Types";
-import * as DEF from "../kernelapi/LinuxArm64Flags";
-import {TypedData} from "../common/TypedData";
-import {SWI} from "../syscalls/LinuxAarch32Syscalls";
+import {InterruptorAgent} from "../common/InterruptorAgent.js";
+import {InterruptorGenericException} from "../common/InterruptorException.js";
+import {T, L, F} from "../common/Types.js";
+import * as DEF from "../kernelapi/LinuxArm64Flags.js";
+import {TypedData} from "../common/TypedData.js";
+import {SWI} from "../syscalls/LinuxAarch32Syscalls.js";
 
 // GPR = Global Purpose Register prefix => x/r
 const GPR = "e";

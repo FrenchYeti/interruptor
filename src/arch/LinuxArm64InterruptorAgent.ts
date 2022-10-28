@@ -1,9 +1,36 @@
-import {F, InterruptorAgent} from "../common/InterruptorAgent";
-import {InterruptorGenericException} from "../common/InterruptorException";
-import {T,L} from "../common/Types";
-import * as DEF from "../kernelapi/LinuxArm64Flags";
-import {TypedData} from "../common/TypedData";
-import {SVC} from "../syscalls/LinuxAarch64Syscalls";
+import {InterruptorAgent, InterruptSignatureMap} from "../common/InterruptorAgent.js";
+import {InterruptorGenericException} from "../common/InterruptorException.js";
+import {T, L, F} from "../common/Types.js";
+import * as DEF from "../kernelapi/LinuxArm64Flags.js";
+import {TypedData} from "../common/TypedData.js";
+import {SVC} from "../syscalls/LinuxAarch64Syscalls.js";
+import {IStringIndex} from "../utilities/IStringIndex.js";
+import {SyscallHandlersMap, SyscallMap} from "../syscalls/ISyscall.js";
+import {DebugUtils} from "../common/DebugUtils";
+
+interface RichContextOptions extends Arm64CpuContext {
+    _extra?:any;
+    [name:string] :any;
+}
+
+interface ExtraContext {
+    orig?:NativePointer;
+    FD?:any;
+    WD?:any;
+    SOCKFD?:any;
+    DFD?:any;
+    [name:string] :any;
+}
+
+interface RichArm64CpuContext extends Arm64CpuContext {
+    dxc?:ExtraContext;
+    log?:string;
+    dxcOpts?:RichContextOptions;
+    dxcRet?:any;
+}
+
+
+
 
 // GPR = Global Purpose Register prefix => x/r
 const GPR = "x";
@@ -19,12 +46,12 @@ const E = DEF.E;
 const MAP_ = DEF.MAP_;
 const X = DEF.X;
 
-const SVC_MAP_NUM:any = {};
-const SVC_MAP_NAME:any = {};
+const SVC_MAP_NUM:SyscallHandlersMap = {};
+const SVC_MAP_NAME:SyscallMap = {};
 
 SVC.map(x => {
     SVC_MAP_NAME[x[1] as string] = x;
-    SVC_MAP_NUM[x[0] as string] = x;
+    SVC_MAP_NUM[x[0]] = x;
 });
 
 let isExcludedFn:any = null;
@@ -36,27 +63,28 @@ export const KAPI = {
     ERR: DEF.ERR
 };
 
-export class LinuxArm64InterruptorAgent extends InterruptorAgent{
+export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStringIndex {
 
-    loadCtr:number = 0;
+    loadCtr = 0;
 
     filter_name: string[] = [];
     filter_num: string[] = [];
+
     svc_hk: any = {};
     hvc_hk: any = {};
     smc_hk: any = {};
     irq_hk: any = {};
 
-    constructor(pConfig:any, pDoFollowThread:any) {
-        super(pConfig, pDoFollowThread);
+    constructor(pConfig:any, pDoFollowThread:any, pInterrupts:InterruptSignatureMap) {
+        super(pConfig, pDoFollowThread, pInterrupts);
         this.configure(pConfig);
     }
 
-    _setupDelegateFilters( pTypes:string, pOpts:any):void {
+    /*_setupDelegateFilters( pTypes:string, pOpts:any):void {
         if(pOpts == null) return;
 
         const o = pOpts;
-        const f = this[pTypes];
+        const f = (this as any)[pTypes];
 
         ["svc","hvc","smc"].map( x => {
             if(o.hasOwnProperty(x))
@@ -66,18 +94,18 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
         if(f.hasOwnProperty("syscalls") && f.syscalls != null){
             f.svc = this.getSyscallList(f.syscalls);
         }
-    }
+    }*/
 
     configure(pConfig:any){
         if(pConfig == null) return;
 
-        for(let k in pConfig){
+        for(const k in pConfig){
             switch (k){
                 case 'svc':
-                    for(let s in pConfig.svc) this.onSupervisorCall(s, pConfig.svc[s]);
+                    for(const s in pConfig.svc) this.onSupervisorCall(s, pConfig.svc[s]);
                     break;
                 case 'hvc':
-                    for(let s in pConfig.hvc) this.onHypervisorCall( parseInt(s as any, 16), pConfig.hvc[s]);
+                    for(const s in pConfig.hvc) this.onHypervisorCall( parseInt(s as any, 16), pConfig.hvc[s]);
                     break;
                 case 'filter_name':
                     this.filter_name = pConfig.filter_name;
@@ -91,64 +119,6 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
         this.setupBuiltinHook();
     }
 
-    protected _updateScope(pScope:any):void {
-        switch ( this._policy.svc){
-            case F.INCLUDE_ANY:
-                isExcludedFn = (x)=>{ return (this._scope.svc.indexOf(x)>-1); };
-                break;
-            case F.EXCLUDE_ANY:
-                isExcludedFn = (x)=>{ return (this._scope.svc.indexOf(x)==-1);};
-                break;
-            case F.FILTER:
-                isExcludedFn = (x)=>{ return (this._scope.svc.i.indexOf(x)==-1 || this._scope.svc.e.indexOf(x)>-1);};
-                break;
-        }
-    }
-
-    /**
-     * To generate a filtered list of syscalls
-     * @param {string[]} pSyscalls An array of syscall number
-     * @method
-     */
-    getSyscallList( pSyscalls:any ):any {
-
-        const list = [];
-
-        switch(typeof pSyscalls){
-            case "string":
-                SVC.map( x => { if(x[1]==pSyscalls) list.push(x[SVC_NUM]); });
-                break;
-            case "function":
-                SVC.map( x => { if(pSyscalls.apply(null, x)) list.push(x[SVC_NUM]); });
-                break;
-            case "object":
-                if(Array.isArray(pSyscalls)){
-                    pSyscalls.map( sVal => {
-                        switch(typeof sVal){
-                            case "string":
-                                SVC.map( x => { if(x[SVC_NAME]==sVal) list.push(x[SVC_NUM]); });
-                                break;
-                            case "number":
-                                SVC.map( x => { if(x[SVC_NUM]==sVal) list.push(x[SVC_NUM]); });
-                                break;
-                            case "object":
-                                SVC.map( x => { if(sVal.exec(x[SVC_NAME])!=null) list.push(x[SVC_NUM]); });
-                                break;
-                        }
-                    })
-                }else if (pSyscalls instanceof RegExp){
-                    SVC.map( x => { if(pSyscalls.exec(x[1])!=null) list.push(x[0]); });
-                }else{
-                    SVC.map(x => { list.push(x[SVC_NUM]); });
-                }
-                break;
-            default:
-                SVC.map(x => { list.push(x[SVC_NUM]); });
-                break;
-        }
-
-        return list;
-    }
 
     onSupervisorCall(pIntName:string, pHooks:any){
         const sc = SVC_MAP_NAME[pIntName];
@@ -167,10 +137,11 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
     }
 
     setupBuiltinHook(){
+        // nothing here
     }
 
     locatePC( pContext: any):string{
-        let l = "", tid:number =-1;
+        let l = "", tid =-1;
         const r = Process.findRangeByAddress(pContext.pc);
 
         if(this.output.tid) {
@@ -202,9 +173,18 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
     }
 
     startOnLoad( pModuleRegExp:RegExp, pOptions:any = null):any {
-        let self=this, do_dlopen = null, call_ctor = null, scopedTrace = null, extra = null, match=null;
+        let  do_dlopen = null, call_ctor = null, scopedTrace = null, match:string|null=null;
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
+        const self=this;
+        const extra:any = null;
+
         //let opts = pOptions;
-        Process.findModuleByName('linker64').enumerateSymbols().forEach(sym => {
+        const linkerMod = Process.findModuleByName('linker64');
+
+        if(linkerMod==null){
+            throw new Error("[ERROR] Linker64 cannot be hooked. Replace startOnLoad() by start(). Exit.")
+        }
+        linkerMod.enumerateSymbols().forEach(sym => {
             if (sym.name.indexOf('do_dlopen') >= 0) {
                 do_dlopen = sym.address;
             } else if (sym.name.indexOf('call_constructor') >= 0) {
@@ -235,6 +215,10 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
         }
 
 
+        if(do_dlopen==null){
+            throw new Error("[ERROR] Linker64 cannot be hooked : do_dlopen not found. Please fill an issue.");
+        }
+
         Interceptor.attach(do_dlopen, function (args) {
             const p = args[0].readUtf8String();
 
@@ -242,6 +226,10 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                 match = p;
             }
         });
+
+        if(call_ctor==null){
+            throw new Error("[ERROR] Linker64 cannot be hooked : call_ctor not found. Please fill an issue.");
+        }
 
         Interceptor.attach(call_ctor, {
             onEnter:function () {
@@ -255,8 +243,6 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                         return ;
                     }
                 }
-
-
 
                 console.warn("[INTERRUPTOR][STARTING] Module '"+match+"' is loading, tracer will start");
                 match = null;
@@ -292,16 +278,17 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
      * @param pSeparator
      * @param pAlign
      */
-    parseStruct( pContext:any, pFormats:TypedData[], pPointer:NativePointer, pSeparator:string ="\n", pAlign:boolean = false):string {
+    parseStruct( pContext:any, pFormats:TypedData[], pPointer:NativePointer, pSeparator ="\n", pAlign = false):string {
 
         let msg:string = " {"+pSeparator;
-        let fmt:TypedData = null, v:string = "", val:any = null;
-        let offset:number =0;
+        let fmt:TypedData, v = "", val:any = null;
+        let offset =0;
 
         //console.log("DSTRUCT",JSON.stringify(pFormats));
 
         for(let i=0; i<pFormats.length; i++){
             fmt = pFormats[i];
+            if(fmt==null) continue;
             //console.log("TYPED_DATA",JSON.stringify(fmt));
             switch(fmt.t){
                 case T.SHORT:
@@ -350,7 +337,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
      * @param pIndex
      */
     parseValue( pContext:any, pValue:any, pFormat:any, pIndex:number):any {
-        let p: string = "", rVal: any = null, t: any = null;
+        let p = "", rVal: any = null, data:any=null, t: any = null;
 
 
         if (typeof pFormat === "string") {
@@ -410,10 +397,16 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                         break;
                     }
                 case L.FLAG:
+                    if (pFormat.t != T.POINTER64){
+                        data = rVal;
+                    }else{
+                        data = ptr(rVal); //readU64();
+                    }
+
                     if (pFormat.r != null) {
                         if (Array.isArray(pFormat.r)) {
-                            let t = [];
-                            pFormat.r.map(x => t.push(pContext[x]));
+                            const t:number|string[] = [];
+                            pFormat.r.map((x:number|string) => t.push(pContext[x]));
                             p += `${(pFormat.f)(rVal, t)}`;
                         } else {
                             p += `${(pFormat.f)(rVal, [pContext[pFormat.r]])}`;
@@ -471,7 +464,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
     traceSyscall( pContext:any, pHookCfg:any = null){
 
         const sys = SVC_MAP_NUM[ pContext.x8.toInt32() ];
-        let inst = "SVC";
+        const inst = "SVC";
 
         if(sys==null) {
             console.log( ' ['+this.locatePC(pContext.pc)+']   \x1b[35;01m' + inst + ' ('+pContext.x8+')\x1b[0m Syscall=<unknow>');
@@ -480,7 +473,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
 
         pContext.dxcRET = sys[SVC_RET];
 
-        let s:string = "", p:string= "";
+        let s = "", p= "";
         pContext.dxcOpts = [];
         sys[3].map((vVal,vOff) => {
             //const rVal = pContext["x"+vOff];
@@ -488,6 +481,8 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
         });
         s = `${sys[1]} ( ${p.slice(0,-1)} ) `;
 
+
+        //console.log(s);
         if(this.output.flavor == InterruptorAgent.FLAVOR_DXC){
             pContext.log = this.formatLogLine(pContext, s, inst, pContext.x8)
         }
@@ -522,7 +517,6 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
 
         let err;
         let ret = pContext.dxcRET;
-        let post:string = null;
         if(ret != null){
 
             switch (ret.l) {
@@ -545,7 +539,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                         pContext.dxc.FD[ pContext.x0.toInt32()+""] = pContext.dxcOpts[ret.r];
                         ret = "("+(L.DFD==ret.l?"D":"")+"FD) "+pContext.x0;
                     }else if(ret.e){
-                        let err = this.getSyscallError(pContext.x0.toInt32(), ret.e);
+                        const err = this.getSyscallError(pContext.x0.toInt32(), ret.e);
                         ret = "(ERROR) "+err+" "  ;
                     }else{
                         ret = "(ERROR) "+pContext.x0;
@@ -557,7 +551,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                         pContext.dxc.SOCKFD[ pContext.x0.toInt32()+""] = pContext.dxcOpts["x1"]+","+pContext.dxcOpts["x2"];
                         ret = "(SOCKFD) "+pContext.x0;
                     }else if(ret.e){
-                        let err = this.getSyscallError(pContext.x0.toInt32(), ret.e);
+                        const err = this.getSyscallError(pContext.x0.toInt32(), ret.e);
                         ret = "(ERROR) "+err+" "  ;
                     }else{
                         ret = "(ERROR) "+pContext.x0;
@@ -567,7 +561,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
                         pContext.dxc.WD[ pContext.x0.toInt32()+""] = pContext.dxcOpts[ret.r];
                         ret = "(WD) "+pContext.x0;
                     }else if(ret.e){
-                        let err = this.getSyscallError(pContext.x0.toInt32(), ret.e);
+                        const err = this.getSyscallError(pContext.x0.toInt32(), ret.e);
                         ret = "(ERROR) "+err+" "  ;
                     }else{
                         ret = "(ERROR) "+pContext.x0;
@@ -604,11 +598,12 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
            ret = pContext.x0;
         }
 
+        // main print here
         console.log( pContext.log +'   > '+ret);
 
         // to process extra data such as structured data edited or passed as args
         if(pContext.dxcOpts != null && pContext.dxcOpts._extra){
-            pContext.dxcOpts._extra.map( x => {
+            pContext.dxcOpts._extra.map( (x:any) => {
 
                 console.log(` ${x.n} = `+this.parseStruct(
                     pContext,
@@ -625,53 +620,95 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent{
     }
 
 
-    trace( pStalkerInterator:any, pInstruction:any, pExtra:any):number{
+    trace( pStalkerInterator: StalkerX86Iterator
+        | StalkerArm64Iterator
+        | StalkerArmIterator
+        | StalkerThumbIterator, pInstruction:any, pExtra:any):number{
 
 
-        const self = this;
+        const self = this as any;
 
-        let keep = 1;
+        const keep = 1;
         if(pExtra.onLeave == 1){
 
-            pStalkerInterator.putCallout(function(context) {
-                const n = context.x8.toInt32();
-                if(context.dxc==null) context.dxc = {FD:{}};
-                if(isExcludedFn!=null && isExcludedFn(n)) return;
+            pStalkerInterator.putCallout((context: PortableCpuContext) =>{
 
-                self.traceSyscallRet(context);
+                const richCtx = context as RichArm64CpuContext;
+                const n = richCtx.x8.toInt32();
 
-                const hook = self.svc_hk[n];
+                if(richCtx.dxc==null) richCtx.dxc = {FD:{}};
+                if(this.scope.syscalls!=null && this.scope.syscalls.isExcluded!=null && this.scope.syscalls.isExcluded(n)) return;
+
+                //self.traceSyscallRet(context);
+
+                if(this.debug.syscallLookup){
+                    console.log(`[DEBUG][SYSCALL][${richCtx.dxc.orig}][${n}] BEFORE ret Parsing}`);
+                }
+                this.traceSyscallRet(richCtx);
+                if(this.debug.syscallLookup){
+                    console.log(`[DEBUG][SYSCALL][${richCtx.dxc.orig}][${n}] AFTER ret Parsing}`);
+                }
+
+                const hook = this.svc_hk[n];
                 if(hook == null) return ;
 
                 if(hook.onLeave != null){
-                    (hook.onLeave)(context);
+                    (hook.onLeave)(richCtx);
                 }
             });
 
             pExtra.onLeave = null;
         }
 
+        const m = Process.findModuleByAddress(pInstruction.address)
+
         // debug
-        //console.log("["+pInstruction.address+" : "+pInstruction.address.sub(pExtra.mod.__mod.base)+"] > "+Instruction.parse(pInstruction.address));
+        if(this.debug.stalker){
+            console.log("["+pInstruction.address+" : "+m.name+" "+(pInstruction.address.sub(m.base))+"] > "+Instruction.parse(pInstruction.address));
+        }
+
 
         if (pInstruction.mnemonic === 'svc') {
 
-            //console.log("SVC Found : > "+pInstruction.mnemonic);
             pExtra.onLeave =  1;
-            pStalkerInterator.putCallout(function(context) {
+            pStalkerInterator.putCallout((context: PortableCpuContext) =>{
 
-                const n = context.x8.toInt32();
+                const richCtx = context as RichArm64CpuContext;
+                const n = richCtx.x8.toInt32();
 
-                if(isExcludedFn!=null && isExcludedFn(n)) return;
+                const m = Process.findModuleByAddress(context.pc)
 
-                if(context.dxc==null) context.dxc = {FD:{}};
-                const hook = self.svc_hk[n];
+                // debug
+                if(this.debug.syscallLookup){
+                    if(m!=null) {
+                        console.log("[DEBUG][SYSCALL][BEFORE FILTER][" + context.pc + " : " + m.name + " " + (context.pc.sub(m.base)) + "] > " + Instruction.parse(context.pc) + " > NUM " + n);
+                    }else{
+                        console.log("[DEBUG][SYSCALL][BEFORE FILTER][" + context.pc + " : UNKNOW MODULE " + (context.pc)+" - MODULE_BASE ] > " + Instruction.parse(context.pc) + " > NUM " + n);
+                    }
+                }
 
 
-                if(hook != null && hook.onEnter != null) (hook.onEnter)(context);
+                //if(isExcludedFn!=null && isExcludedFn(n)) return;
+                //f(this.scope.syscalls.isExcluded!=null && this.scope.syscalls.isExcluded(n)) return;
+                if(this.scope.syscalls!=null && this.scope.syscalls.isExcluded!=null && this.scope.syscalls.isExcluded(n)) return;
 
-                self.traceSyscall(context, hook);
+                if(richCtx.dxc==null) richCtx.dxc = {FD:{}};
+                const hook = this.svc_hk[n];
 
+                richCtx.dxc.orig = context.pc;
+
+                if(hook != null && hook.onEnter != null){
+                    (hook.onEnter)(richCtx);
+                }
+
+
+                if(this.debug.syscallLookup){
+                    console.log(`[DEBUG][SYSCALL][${richCtx.dxc.orig}][${n}] BEFORE arg Parsing}`);
+                }
+                this.traceSyscall(richCtx, hook);
+                if(this.debug.syscallLookup){
+                    console.log(`[DEBUG][SYSCALL][${richCtx.dxc.orig}][${n}] AFTER arg Parsing = \n\t${richCtx.log }`);
+                }
             });
         }
 

@@ -1,9 +1,9 @@
-import {F, InterruptorAgent} from "../common/InterruptorAgent";
-import {InterruptorGenericException} from "../common/InterruptorException";
-import {T,L} from "../common/Types";
-import * as DEF from "../kernelapi/LinuxX64Flags";
-import {TypedData} from "../common/TypedData";
-import {SYSC} from "../syscalls/LinuxX64Syscalls";
+import {InterruptorAgent} from "../common/InterruptorAgent.js";
+import {InterruptorGenericException} from "../common/InterruptorException.js";
+import {T, L, F} from "../common/Types.js";
+import * as DEF from "../kernelapi/LinuxX64Flags.js";
+import {TypedData} from "../common/TypedData.js";
+import {SYSC} from "../syscalls/LinuxX64Syscalls.js";
 
 // GPR = Global Purpose Register prefix => x/r
 const GPR = "e";
@@ -51,7 +51,7 @@ export const KAPI = {
 
 export class LinuxX64InterruptorAgent extends InterruptorAgent{
 
-    loadCtr:number = 0;
+    loadCtr = 0;
 
     filter_name: string[] = [];
     filter_num: string[] = [];

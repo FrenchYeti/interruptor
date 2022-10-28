@@ -1,4 +1,5 @@
-import {T} from "./Types";
+import {T} from "./Types.js";
+import {IStringIndex} from "../utilities/IStringIndex.js";
 
 export enum VAL_TYPE {
     CONSTANT,
@@ -9,7 +10,7 @@ export enum VAL_TYPE {
 /**
  * @class
  */
-export class TypedData {
+export class TypedData implements IStringIndex {
     /**
      * Data type
      * See T
@@ -21,20 +22,20 @@ export class TypedData {
      * Type or arg name
      * @field {string}
      */
-    n:string = null;
+    n = "";
 
     /**
      * Register number holding extra value required to
      * interpret current data
      * @field {number}
      */
-    r:number = -1;
+    r = -1;
 
     /**
      * Meaning of the value (conceptually) : file descriptor, pointer to struct, flags, ...
      * @field {Types.L}
      */
-    l:number;
+    l=-1;
 
     /**
      * Optional. If the mean of the data is specified, an extra value to help to parse
@@ -50,7 +51,7 @@ export class TypedData {
      * Default is FALSE
      * @field {boolean}
      */
-    c:boolean = false;
+    c = false;
 
     /**
      * Optional. The list of error codes which can be hold by this data.
@@ -80,7 +81,7 @@ export class TypedData {
      */
     constructor(pCfg:any = null) {
         if(pCfg != null){
-            for(let i in pCfg) this[i] = pCfg[i];
+            for(const i in pCfg) (this as any)[i] = pCfg[i];
         }
     }
 
@@ -95,24 +96,24 @@ export class TypedData {
         return new TypedData(pCfg);
     }
 
-    static buffer(pType:TypedData, pSize:number =-1){
-        return null; //pType.copy();
+    static buffer(pType:TypedData, pSize =-1){
+        return this; //pType.copy();
     }
 
     out(){
         return this.copy().update({ v: VAL_TYPE.OUTPUT });
     }
 
-    update( pCfg:any){
-        for(let i in pCfg){
-            this[i] = pCfg[i];
+    update( pCfg:IStringIndex){
+        for(const i in pCfg){
+            (this as any)[i] = pCfg[i];
         }
         return this;
     }
 
-    copy( pName:string=null){
-        let t:TypedData = new TypedData(this);
-        if(pName!=null)  t.n = pName;
+    copy( pName=""){
+        const t:TypedData = new TypedData(this);
+        if(pName!="")  t.n = pName;
         return t;
     }
 
@@ -122,7 +123,7 @@ export class TypedData {
     }
 
     asReturn( pError:any[]=[]){
-        let t:TypedData = new TypedData(this);
+        const t:TypedData = new TypedData(this);
         t.e = pError;
         return t;
     }

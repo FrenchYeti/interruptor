@@ -6,10 +6,12 @@
  *
  * @author georges@dexcalibur.org
  */
-import {LinuxArm64InterruptorFactory} from "./src/arch/LinuxArm64InterruptorFactory";
+import {LinuxArm64InterruptorFactory} from "./src/arch/LinuxArm64InterruptorFactory.js";
 
-export const target = {
+const target = {
     LinuxArm64: function(pOptions:any){
         return new LinuxArm64InterruptorFactory(pOptions);
     }
 }
+
+export default target;

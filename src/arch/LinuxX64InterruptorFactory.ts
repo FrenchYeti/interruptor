@@ -5,12 +5,12 @@
 
  */
 import {InterruptorGenericException} from "../common/InterruptorException";
-import {T, L} from  "../common/Types";
-import {X} from "../kernelapi/LinuxX64Flags";
-import {InterruptorAgent} from "../common/InterruptorAgent";
-import {AbstractInterruptorFactory} from "../common/AbstractInterruptorFactory";
-import {Utils} from "../common/Utils";
-import {LinuxX64InterruptorAgent, KAPI} from "./LinuxX64InterruptorAgent";
+import {T, L} from  "../common/Types.js";
+import {X} from "../kernelapi/LinuxX64Flags.js";
+import {InterruptorAgent} from "../common/InterruptorAgent.js";
+import {AbstractInterruptorFactory} from "../common/AbstractInterruptorFactory.js";
+import {Utils} from "../common/Utils.js";
+import {LinuxX64InterruptorAgent, KAPI} from "./LinuxX64InterruptorAgent.js";
 
 
 

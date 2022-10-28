@@ -6,10 +6,11 @@
  *
  * @author georges@dexcalibur.org
  */
-import {LinuxAarch32InterruptorFactory} from "./src/arch/LinuxAarch32InterruptorFactory";
+import {LinuxAarch32InterruptorFactory} from "./src/arch/LinuxAarch32InterruptorFactory.js";
 
-export const target = {
+const target = {
     LinuxAarch32: function(pOptions:any){
         return new LinuxAarch32InterruptorFactory(pOptions);
     }
 }
+export default target;

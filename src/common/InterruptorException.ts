@@ -14,7 +14,7 @@ export class MonitoredError extends Error {
     code:number;
     extra:any;
 
-    constructor( pCmp:string, pMsg:string, pCode:number = null, pExtra:any = null) {
+    constructor( pCmp:string, pMsg:string, pCode = 0, pExtra:any = null) {
         super(pMsg);
         this.cmp = pCmp;
         this.code = pCode;
@@ -38,7 +38,7 @@ export class MonitoredError extends Error {
      *
      * @param pIncludeExtra
      */
-    toObject(pIncludeExtra:boolean=false):any {
+    toObject(pIncludeExtra=false):any {
         return {
             cmp: this.cmp,
             code: this.code,
@@ -59,9 +59,9 @@ export class InterruptorGenericException extends MonitoredError {
 
     static INVALID_PID = ()=>{ return new InterruptorGenericException(" PID is invalid ",InterruptorGenericException.ERR.INVALID_PID) };
     static INVALID_TID = ()=>{ return new InterruptorGenericException(" Thread ID is invalid ",InterruptorGenericException.ERR.INVALID_TID) };
-    static UNKNOW_SYSCALL = (sys)=>{ return new InterruptorGenericException(" Syscall '"+sys+"' not exists ",InterruptorGenericException.ERR.UKNOW_SYSCALL) };
+    static UNKNOW_SYSCALL = (sys:string|number)=>{ return new InterruptorGenericException(" Syscall '"+sys+"' not exists ",InterruptorGenericException.ERR.UKNOW_SYSCALL) };
 
-    constructor( pMsg:string, pCode:number = null, pExtra:any = null) {
+    constructor( pMsg:string, pCode = 0, pExtra:any = null) {
         super('GLOBAL', pMsg, pCode, pExtra);
     }
 }

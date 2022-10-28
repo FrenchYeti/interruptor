@@ -1,4 +1,4 @@
-import {TypedData} from "./TypedData";
+import {TypedData} from "./TypedData.js";
 
 export interface TypeDefList {
     [typeName:string] :TypeDef
@@ -10,7 +10,7 @@ export class TypeDef {
 
     constructor(pDefine:any = [], pCopy = false) {
         this.t = [];
-        pDefine.map(( data)=>{
+        pDefine.map(( data:any)=>{
             this.t.push( pCopy ? data : (new TypedData(data)) );
         });
     }

@@ -1,16 +1,51 @@
-import {CoverageAgent} from "../utilities/Coverage";
-import {L} from "./Types";
+import {CoverageAgent} from "../utilities/Coverage.js";
+import {F, L} from "./Types.js";
+import {IStringIndex} from "../utilities/IStringIndex.js";
+import {DebugUtils} from "./DebugUtils.js";
+import {SyscallInfo, SyscallSignature} from "../syscalls/ISyscall.js";
+import {SVC} from "../syscalls/LinuxAarch64Syscalls.js";
 
 let CTR = 0;
 
+export type InterruptSignature = SyscallSignature;
 
-export enum F {
-    EXCLUDE_ANY,
-    INCLUDE_ANY,
-    FILTER
+export interface InterruptSignatureMap {
+    syscalls?: SyscallSignature[],
+    [type:string] :InterruptSignature[]
 }
 
-export class InterruptorAgent {
+export interface DebugOptions {
+    syscallLookup:boolean;
+    scope:boolean;
+    stalker:boolean;
+}
+
+export interface NumericRange {
+    start:number;
+    stop:number;
+    inc?:number;
+}
+
+export type ScopeFilter = number | string | ((...args: any[])=>boolean) | RegExp | NumericRange;
+
+export interface Scope {
+    _policy?:F;
+    exclude?:ScopeFilter[];
+    include?:ScopeFilter[];
+    isExcluded:((num:number)=>boolean)
+}
+
+
+export interface ScopeMap {
+    modules:Scope|null;
+    syscalls:Scope|null;
+    ranges?:Scope|null;
+    [customScope:string] :Scope|null;
+}
+
+
+
+export class InterruptorAgent implements IStringIndex {
 
 
     _tids:number[] = [];
@@ -18,10 +53,10 @@ export class InterruptorAgent {
     static FLAVOR_DXC = "dxc";
     static FLAVOR_STRACE= "strace";
 
-    uid:number = 0;
+    uid = 0;
 
     ranges: any = new Map();
-    modules: any[] = [];
+    modules: Module[] = [];
 
 
     /**
@@ -30,17 +65,17 @@ export class InterruptorAgent {
      * @field
      * @public
      */
-    pid: number = -1;
+    pid = -1;
 
-    tid: number = -1;
+    tid = -1;
 
     emulator:boolean;
 
-    followFork:boolean = false;
+    followFork = false;
 
-    followThread:boolean = false;
+    followThread = false;
 
-    coverage:CoverageAgent = null;
+    coverage?:CoverageAgent;
 
     exclude: any = null;
 
@@ -48,16 +83,25 @@ export class InterruptorAgent {
 
     moduleFilter: any = null;
 
-    debug:boolean = false;
+    interrupts: InterruptSignatureMap;
+
+    scope:ScopeMap;
+
+    debug:DebugOptions = {
+        scope: false,
+        syscallLookup: false,
+        stalker: false
+    };
+
 
     types:any = {};
 
-    /**
+    /*
      * Filter type : include, equal, exclude
      */
-    _policy:any = {};
+    //_policy:any = {};
 
-    _scope:any = {};
+    //_scope:any = {};
 
     /**
      * To use with startOnLoad()
@@ -66,7 +110,12 @@ export class InterruptorAgent {
      * @field
      * @public
      */
-    onStart:any = ()=>{};
+    onStart:any = ()=>{ /* empty */ };
+
+    hook:any = {
+        beforeStart: null,
+        afterStart: null
+    };
 
 
     output:any = {
@@ -77,6 +126,7 @@ export class InterruptorAgent {
         module: true,
         dump_buff: true,
         hide: null,
+        indent:"",
         highlight: {
             syscalls: []
         }
@@ -89,11 +139,14 @@ export class InterruptorAgent {
      * @param {any} pConfig Options
      * @constructor
      */
-    constructor( pOptions:any, pDoFollowThread:any = null) {
+    constructor( pOptions:any, pDoFollowThread:any = null, pInterrupts:InterruptSignatureMap = {}) {
         this.uid = CTR++;
         this.emulator = false;
         this._do_ft = pDoFollowThread;
+        this.interrupts = pInterrupts;
+        this.scope = pOptions.scope;
         this.parseOptions(pOptions);
+        //this.scope = this.scope;
     }
 
     /**
@@ -105,7 +158,7 @@ export class InterruptorAgent {
      */
     parseOptions(pConfig:any):void {
 
-        for(let k in pConfig){
+        for(const k in pConfig){
             switch(k){
                 case 'types':
                     this.types = pConfig.types;
@@ -134,12 +187,17 @@ export class InterruptorAgent {
                 case 'output':
                     for(const i in pConfig.output) this.output[i] = pConfig.output[i];
                     break;
-                case 'include':
-                case 'exclude':
-                    this._setupFilters(k, pConfig[k]);
-                    break;
                 case 'moduleFilter':
                     this.moduleFilter = pConfig.moduleFilter;
+                    break;
+                case 'hook':
+                    this.hook = pConfig.hook;
+                    break;
+                case 'debug':
+                    this.debug = pConfig.debug;
+                    break;
+                case 'scope':
+                    this.scope = pConfig.scope; //this._prepareScope(pConfig.scope);
                     break;
                 case 'onStart':
                     this.onStart = pConfig.onStart;
@@ -149,93 +207,65 @@ export class InterruptorAgent {
     }
 
     /**
+     * The aim of this method is to ttr
+     * @param pSyscall
+     */
+    public prepareScope():void{
+        // scan modules
+        this._filterModuleScope();
+
+        // scan syscalls
+        this._filterSyscallScope();
+    }
+
+    /**
      *
      * @param pType
      * @param pOpts
      * @protected
      */
     protected _setupDelegateFilters(pType:string, pOpts:any):void {
-
+        // nothing here
     }
+
 
 
     /**
-     * The aime of this function is to compute final scope by merging
-     * exclude / include options
-     *
-     * @param pType
-     * @param pOpts
-     * @protected
+     * To generate a filtered list of syscalls
+     * @param {string[]} pSyscalls An array of syscall number
+     * @method
      */
-    protected _buildScope():any {
-        this._scope = {
-            modules: null,
-            syscalls: null
-        };
+    getModuleList( pFilters:ScopeFilter[],  pSrcList:Module[] = [],  pList:string[] = []):string[] {
 
-        if(this.include != null){
-            for(let i in this.include){
-                this._policy[i] = F.EXCLUDE_ANY;
-                this._scope[i] = this.include[i];
-            }
-        }else{
-            for(let i in this._scope){
-                this._policy[i] = F.INCLUDE_ANY;
-            }
+        if(pFilters == null){
+            return [];
         }
 
-        if(this.exclude != null){
-            for(let i in this.exclude){
-                // true only if "include" is defined
-                if(this._scope.hasOwnProperty(i) && this._scope[i] != null){
-                    if(this._policy[i] == F.EXCLUDE_ANY){
-                        this._policy[i] = F.FILTER;
-                        this._scope[i] = { i: this._scope[i], e:this.exclude[i] }
-                    }else{
-                        this._policy[i] = F.INCLUDE_ANY;
-                        this._scope[i] = this.exclude[i];
-                    }
-                    //this._scope[i] = this._scope[i].filter( v => this.exclude[i].indexOf(v)==-1 );
-                }else{
-                    // else, filtering only
-                    this._policy[i] = F.INCLUDE_ANY; // keep only element not in the list
-                    this._scope[i] = this.exclude[i];
-                }
+        const modules:Module[] = (pSrcList.length==0) ? Process.enumerateModules() : pSrcList;
+        const list:string[] = pList;
+
+        pFilters.map((vFilter:ScopeFilter)=>{
+            switch(typeof vFilter){
+                case "string":
+                    modules.map( x => { if(x.name==vFilter) list.push(x.name); });
+                    break;
+                case "function":
+                    modules.map( x => { if((vFilter)(...[x])) list.push(x.name); });
+                    break;
+                case "object":
+                    if(Array.isArray(vFilter)){
+                        vFilter.map( sVal => {
+                            list.concat(this.getModuleList(sVal, modules, list));
+                        })
+                    }else if(vFilter instanceof RegExp){
+                        modules.map( x => { if(vFilter.exec(x.name)!=null) list.push(x.name); });
+                    } // todo : add selection by range start -> end / size
+                    break;
             }
-        }
+        });
 
-        this._updateScope(this._scope, this._policy);
-    }
 
-    protected _updateScope(pScope:any, pPolicy:any):void {
-
-    }
-
-    /**
-     *
-     * @param pType
-     * @param pOpts
-     * @private
-     */
-    private _setupFilters(pType:string, pOpts:any):void {
-
-        if(this[pType]==null) this[pType] = {};
-
-        const filt = this[pType];
-        for(const t in pOpts){
-            for(const ppt in pOpts){
-                switch(ppt){
-                    case "modules":
-                        filt.modules = pOpts.modules;
-                        break;
-                    case "syscalls":
-                        filt.syscalls = pOpts.syscalls;
-                        break;
-                }
-            }
-        }
-
-        this._setupDelegateFilters(pType, pOpts);
+        return list;
     }
 
 
@@ -244,33 +274,97 @@ export class InterruptorAgent {
      * @param {string[]} pSyscalls An array of syscall number
      * @method
      */
-    getModuleList( pFilter:any,  pSrcList:Module[] = null,  pList:any = []):any {
+    getSyscallList( pSyscalls:ScopeFilter ):number[] {
 
-        if(pFilter == null){
-            return [];
-        }
+        const list:number[] = [];
 
-        const mods:Module[] = pSrcList==null ? Process.enumerateModules() : pSrcList;
-        const list = pList;
-        switch(typeof pFilter){
+        switch(typeof pSyscalls){
             case "string":
-                mods.map( x => { if(x.name==pFilter) list.push(x.name); });
+                this.interrupts.syscalls.map(x => { if(x[1]==pSyscalls) list.push(x[SyscallInfo.NUM]); });
                 break;
             case "function":
-                mods.map( x => { if(pFilter.apply(null, x)) list.push(x.name); });
+                this.interrupts.syscalls.map( x => { if((pSyscalls)(...[x])) list.push(x[SyscallInfo.NUM]); });
                 break;
             case "object":
-                if(Array.isArray(pFilter)){
-                    pFilter.map( sVal => {
-                        list.concat(this.getModuleList(sVal, mods, list));
+                if(Array.isArray(pSyscalls)){
+                    pSyscalls.map( sVal => {
+                        switch(typeof sVal){
+                            case "string":
+                                this.interrupts.syscalls.map( x => { if(x[SyscallInfo.NAME]==sVal) list.push(x[SyscallInfo.NUM]); });
+                                break;
+                            case "number":
+                                this.interrupts.syscalls.map( x => { if(x[SyscallInfo.NUM]==sVal) list.push(x[SyscallInfo.NUM]); });
+                                break;
+                            case "object":
+                                this.interrupts.syscalls.map( x => {
+
+                                    if(sVal.exec(x[SyscallInfo.NAME])!=null){
+                                        const m = x[SyscallInfo.NUM]
+                                        list.push(m);
+                                        //console.log(sVal,x[SVC_NAME],m);
+                                    }
+                                });
+                                break;
+                        }
                     })
-                }else if(pFilter instanceof RegExp){
-                    mods.map( x => { if(pFilter.exec(x.name)!=null) list.push(x.name); });
-                } // todo : add selection by range start -> end / size
+                }else if (pSyscalls instanceof RegExp){
+                    this.interrupts.syscalls.map( x => { if(pSyscalls.exec(x[1])!=null) list.push(x[0]); });
+                }else{
+                    this.interrupts.syscalls.map(x => { list.push(x[SyscallInfo.NUM]); });
+                }
+                break;
+            default:
+                this.interrupts.syscalls.map(x => { list.push(x[SyscallInfo.NUM]); });
                 break;
         }
 
         return list;
+    }
+
+    /**
+     *
+     * @private
+     */
+    private _filterSyscallScope():void {
+
+        let syscalls:number[] = [];
+
+        if(this.scope.syscalls!=null){
+
+            const scope:Scope = this.scope.syscalls;
+
+            if(scope.exclude){
+                // if there is an exclusion list, then the default behavior is to include any
+                scope._policy = F.INCLUDE_ANY;
+
+                if(scope.exclude != null){
+                    scope.exclude.map((vFilter)=>{
+                        syscalls = syscalls.concat(this.getSyscallList(vFilter));
+                    });
+                }
+
+                scope.exclude = syscalls;
+                scope.isExcluded = (x:number)=>{ return (syscalls.indexOf(x)>-1) };
+            }else{
+                // if there is an inclusion list, then the default behavior is to exclude any
+                scope._policy = F.EXCLUDE_ANY;
+                if(scope.include != null){
+                    scope.include.map((vFilter)=>{
+                        syscalls = syscalls.concat(this.getSyscallList(vFilter));
+                    });
+                }
+
+                scope.include = syscalls;
+                scope.isExcluded = (x:number)=>{ return !(syscalls.indexOf(x)>-1) };
+            }
+
+        }else{
+            this.scope.syscalls = {
+                exclude:[],
+                _policy: F.INCLUDE_ANY,
+                isExcluded: (x:number)=>{ return false; }
+            };
+        }
     }
 
     /**
@@ -281,42 +375,54 @@ export class InterruptorAgent {
     private _filterModuleScope():void {
 
         let modules:string[];
-        let map:ModuleMap;
+        let map:ModuleMap = new ModuleMap();
 
-        if(this._scope.hasOwnProperty("modules") && this._scope.modules!=null){
+        if(this.scope.modules!=null){
 
-            if(!this._scope.hasOwnProperty("modules")){
-                this._policy.modules = F.INCLUDE_ANY;
+            const scope:Scope = this.scope.modules;
+
+            if(scope.exclude){
+                // if there is an exclusion list, then the default behavior is to include any
+                scope._policy = F.INCLUDE_ANY;
+                if(scope.exclude == null) scope.exclude = [];
+            }else{
+                // if there is an inclusion list, then the default behavior is to exclude any
+                scope._policy = F.EXCLUDE_ANY;
+                if(scope.include == null) scope.include = [];
             }
 
             //list = this._scope.modules != null ? this.getModuleList(this._scope.modules) : this.getModuleList(null);
 
-            if(this._policy.modules == F.EXCLUDE_ANY){
+            if(scope._policy == F.EXCLUDE_ANY){
                 // authorized modules
-                modules = this.getModuleList(this._scope.modules);
+                scope.include = modules = this.getModuleList(scope.include==null? [] : scope.include);
                 map = new ModuleMap((m) => {
                     if(modules.indexOf(m.name)==-1){
+                        if(this.debug.scope) console.log("[DEBUG] Excluded : "+JSON.stringify(m));
                         Stalker.exclude(m);
                         return false;
                     }
-                    //console.log("Modules (exclude any): "+m.name);
+                    //console.log("Modules included : "+m.name);
                     return true;
                 });
             }
-            else if(this._policy.modules == F.INCLUDE_ANY){
+            else if(scope._policy == F.INCLUDE_ANY){
                 // excluded modules
-                modules = this.getModuleList(this._scope.modules);
+                scope.exclude = modules = this.getModuleList(scope.exclude==null? [] : scope.exclude);
                 map = new ModuleMap((m) => {
-                    if(modules.indexOf(m.name)>=-1){
+                    if(modules.indexOf(m.name)>-1){
+                        if(this.debug.scope)  console.log("[DEBUG] Excluded : "+JSON.stringify(m));
                         Stalker.exclude(m);
                         return false;
                     }
-                    //console.log("Modules (include any): "+m.name);
+                    //console.log("Modules included : "+m.name);
                     return true;
                 });
             }
             else{
-                if(this._scope.modules == null || this._scope.modules.i == null){
+                // filter mode
+                /*
+                if(this._scope.modules.i == null){
                     modules = Process.enumerateModules().map( x => x.name);
                 }else{
                     modules = this.getModuleList (this._scope.modules.i);
@@ -336,11 +442,13 @@ export class InterruptorAgent {
                     }
                     // console.log("Modules (filter): "+m.name);
                     return true;
-                });
+                });*/
             }
         }else{
-            this._policy.modules = F.INCLUDE_ANY;
-            map = new ModuleMap();
+            if(this.scope.modules==null) this.scope.modules = {
+                isExcluded: ()=>{return false}
+            };
+            this.scope.modules._policy = F.INCLUDE_ANY;
         }
 
         this.modules = map.values();
@@ -366,9 +474,10 @@ export class InterruptorAgent {
      *
      * @param pStalkerEvents
      */
-    processBbsCoverage( pStalkerEvents:any){
+    processBbsCoverage( pStalkerEvents: StalkerEventFull[] | StalkerEventBare[]){
+
         pStalkerEvents.forEach((e) => {
-            this.coverage.processStalkerEvent(e);
+            if(this.coverage!=null) this.coverage.processStalkerEvent(e);
         });
     }
 
@@ -394,23 +503,22 @@ export class InterruptorAgent {
      * To start to trace
      *
      */
-    start( pTID:number = -1){
+    start( pTID = -1){
 
+        if(this.hook.beforeStart != null){
+            this.hook.beforeStart.apply(null, [{ agent:this, tid:pTID }]);
+        }
 
-        this._buildScope();
+        //this._buildScope();
+        //this._buildScope();
 
-        if(this.debug){
-            if(this._scope.modules.length > 0){
-                console.log(this._scope);
-            }
-            if(this._scope.syscalls.length > 0){
-                console.log(this._scope);
-            }
+        if(this.debug.scope){
+            DebugUtils.printModuleScopes(this);
+            DebugUtils.printSyscallScopes(this);
         }
 
 
-        // @ts-ignore
-        let tid = pTID > -1 ? pTID : null;
+        let tid = (pTID > -1) ? pTID : null;
         if(tid === null){
             if(this.tid > -1){
                 tid = this.tid;
@@ -420,35 +528,39 @@ export class InterruptorAgent {
         }
 
         if(this._tids.indexOf(tid)>-1){
-            console.warn("[INTERRUPTOR][STARTING] Thread already tracked");
+            console.warn(this.output.indent+"[INTERRUPTOR][STARTING] Thread already tracked");
             return;
         }else{
-            console.warn("[INTERRUPTOR][STARTING] Tracing thread "+tid+" ["+this._tids.join(",")+"]");
+            console.warn(this.output.indent+"[INTERRUPTOR][STARTING] Tracing thread "+tid+" ["+this._tids.join(",")+"]");
             this._tids.push(tid);
         }
 
 
-        const self = this;
-        let pExtra:any = {};
+        //const self = this;
+        const pExtra:any = {};
 
-        console.log("[STARTING TRACE] UID="+this.uid+" Thread "+tid);
+        console.log(this.output.indent+"[STARTING TRACE] UID="+this.uid+" Thread "+tid);
 
-        // to exclude configured ranges
-        this._filterModuleScope();
+        // to exclude configured ranges/modules from Stalker
+        // this._filterModuleScope();
 
 
 
         // Configure staker
-        const opts:any = {
+        const opts:StalkerOptions = {
             events: {
                 call: true
             },
-            transform: function(iterator){
+            transform: (iterator: StalkerX86Iterator
+                | StalkerArm64Iterator
+                | StalkerArmIterator
+                | StalkerThumbIterator )=>{
+
                 let instruction; // Arm64Instruction | X86Instruction | null;
 
-                let next:number = 0;
+                let next = 0;
 
-                let threadExtra:any = pExtra;
+                const threadExtra:any = pExtra;
                 threadExtra.hookAfter =  null;
                 threadExtra.onLeave =  null;
 
@@ -456,7 +568,8 @@ export class InterruptorAgent {
                     next = 1;
 
                     //console.log(instruction);
-                    next = self.trace( iterator, instruction, threadExtra );
+                    next = this.trace( iterator, instruction, threadExtra );
+                    //next = self.trace( iterator, instruction, threadExtra );
 
                     if(next==-1){
                         continue;
@@ -472,28 +585,38 @@ export class InterruptorAgent {
         if(this.isTrackCoverage()){
 
             console.log("TRACK COVERAGE");
+            if(opts.events==null){
+                opts.events = {};
+            }
             opts.events.compile = true;
-            opts.onReceive = (pEvents)=>{
+            opts.onReceive = (pEvents: ArrayBuffer)=>{
+
+
                 //console.log(pEvents);
                 this.processBbsCoverage(
-                    Stalker.parse(pEvents, {
+                    Stalker.parse( pEvents, {
                         annotate: true,
                         stringify: false,
                     })
                 );
             };
 
-            this.coverage.initOutput();
+            if(this.coverage != null) this.coverage.initOutput();
 
         }
 
-        // @ts-ignore
+
         // Stalker.trustThreshold = 1;
         Stalker.follow(tid, opts);
 
         // prevent interceptor issue
         if(this._do_ft !== null){
             this._do_ft(this);
+        }
+
+
+        if(this.hook.afterStart != null){
+            this.hook.afterStart.apply(null,  [{ agent:this, tid:tid, opts:opts }] );
         }
     }
 
@@ -502,7 +625,7 @@ export class InterruptorAgent {
      *
      * @param pSyscallList
      */
-    printStats( pSyscallList:any[] = null){
+    printStats( pSyscallList:any[] = []){
         const stats = { handlers:0, err:0, atot:0, untyped:0, todo:0, struct:0 };
         const types = {};
 
@@ -521,10 +644,10 @@ export class InterruptorAgent {
                 if(typeof (arg)==="string"){ impl=false; break;}
                 // detect structure not supported
                 if(arg.l != null && arg.l==L.DSTRUCT){
-                    if(types[arg.f]==null)
-                        types[arg.f]=1;
+                    if((types as any)[arg.f]==null)
+                        (types as any)[arg.f]=1;
                     else
-                        types[arg.f]++;
+                        (types as any)[arg.f]++;
                 }
             }
             stats.untyped += (!impl ? 1: 0);
@@ -541,7 +664,7 @@ export class InterruptorAgent {
         for(const s in types){
             if(this.types[s]==null){
                 notImpl.push(s);
-                msgImpl += ` ${s} (${types[s]}), `;
+                msgImpl += ` ${s} (${(types as any)[s]}), `;
             }
         }
 
