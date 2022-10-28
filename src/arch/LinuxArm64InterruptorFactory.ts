@@ -64,29 +64,54 @@ export class LinuxArm64InterruptorFactory extends AbstractInterruptorFactory {
 
         console.error("Deploying pthread_create hook");
         LinuxArm64InterruptorFactory.HOOKED_PTHREAD_ROUTINE = {};
-        Interceptor.attach( Module.findExportByName("libc.so","pthread_create"), {
-            onEnter: function(args){
-                let routine = args[2];
 
+        let depth=0;
+        const addr = Module.findExportByName("libc.so","pthread_create");
+        if(addr == null) throw new Error("[ERROR] Thread cannot be followed : libc/pthread_create cannot be hooked");
+
+        Interceptor.attach( addr, {
+            onEnter: function(args){
+                const routine = args[2];
+
+                depth++;
                 if(routine != null && !LinuxArm64InterruptorFactory.HOOKED_PTHREAD_ROUTINE.hasOwnProperty(routine)){
                     LinuxArm64InterruptorFactory.HOOKED_PTHREAD_ROUTINE[routine+""]=true;
-                    console.log("["+Process.findModuleByAddress(this.context.pc).name+"] Hooking routine : "+routine+" "
-                        +JSON.stringify(LinuxArm64InterruptorFactory.HOOKED_PTHREAD_ROUTINE));
+
+                    const indent = "\t".repeat(depth);
+                    const ptid = "[PTID="+Process.getCurrentThreadId()+"]";
+                    //console.log(indent+"["+Process.findModuleByAddress(this.context.pc).name+"] Hooking routine : "+routine+" "
+                    //    +JSON.stringify(LinuxArm64InterruptorFactory.HOOKED_PTHREAD_ROUTINE));
 
                     Interceptor.attach( routine, {
                         onEnter: function(a){
-                            const m = Process.findModuleByAddress(this.context.pc);
-                            console.log("------- [TID="+this.threadId+"]["+m.name+"]["+routine+"] Thread routine start -------");
 
+                            let m:any = {};
+
+                            if(this.context.pc != null){
+                                const x = Process.findModuleByAddress(this.context.pc);
+                                if(x != null) m = x;
+                            }
+
+                            if(m.name.length==0){
+                                m.name = 'MISSING_MODULE'
+                            }
+
+
+                            console.log("\n"+indent+"------- [TID="+this.threadId+"]["+m.name+"]["+routine+"] Thread routine start -------");
+
+                            //AbstractInterruptorFactory.printBackTrace(this.context);
                             //console.log(JSON.stringify(self),self._pickThreadColor);
                             const cfg = deepCopy(pConfig);
+                            cfg.output.indent = indent;
                             cfg.output._tcolor = AbstractInterruptorFactory._pickThreadColor();
-                            const b = new LinuxArm64InterruptorAgent(cfg, this._followThread);
+                            const b = new LinuxArm64InterruptorAgent(cfg, this._followThread,{
+                                syscalls: SVC
+                            } );
                             LinuxArm64InterruptorFactory.AGENTS.push(b);
                             b.start(this.threadId);
                         },
                         onLeave: function(a){
-                            console.log("------- [TID="+this.threadId+"]["+routine+"] Thread routine ended -------");
+                            console.log(indent+"------- [TID="+this.threadId+"]["+routine+"] Thread routine ended -------\n");
 
                         }
                     } )
@@ -100,15 +125,19 @@ export class LinuxArm64InterruptorFactory extends AbstractInterruptorFactory {
      */
     newAgentTracer(pConfig: any):InterruptorAgent {
 
-        const agent = new LinuxArm64InterruptorAgent(pConfig, LinuxArm64InterruptorFactory._followThread);
+        const agent = new LinuxArm64InterruptorAgent(pConfig, LinuxArm64InterruptorFactory._followThread, {
+            syscalls: SVC
+        });
+
+        agent.prepareScope();
         //agent.buildScope();
         return agent;
     }
 
-
-    newStandaloneTracer(){
-        return null ;
+/*
+    newStandaloneTracer():any{
+        return  ;
     }
-
+*/
 
 }
