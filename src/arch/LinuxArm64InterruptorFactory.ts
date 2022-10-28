@@ -14,12 +14,25 @@ import {SVC} from "../syscalls/LinuxAarch64Syscalls.js";
 
 
 function deepCopy(pSrcObject:any): any {
-    const destObj = {};
-    for(let i in pSrcObject){
-        if(typeof pSrcObject[i] == 'object' && pSrcObject[i] !== null){
-            destObj[i] = deepCopy(pSrcObject[i]);
+    const src:any = pSrcObject;
+    const destObj:any = {};
+    for(const i in src){
+        if(typeof src[i] == 'object' && src[i] !== null){
+            if(Array.isArray(src[i])){
+                const arr:any[] = [];
+                src[i].map((x:any) => {
+                    if(typeof x == 'object' && x !== null){
+                        arr.push(deepCopy(x));
+                    }else{
+                        arr.push(x);
+                    }
+                });
+                destObj[i] = arr;
+            }else{
+                destObj[i] = deepCopy(src[i]);
+            }
         }else{
-            destObj[i] = pSrcObject[i];
+            destObj[i] = src[i];
         }
     }
     return destObj;
