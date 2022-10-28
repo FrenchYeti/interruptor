@@ -11,3 +11,5 @@ pack: compile
 	npx webpack --config webpack.android.x64.config.js
 
 all: pack
+	mkdir ./dist
+	cp ./*-strace.min.js ./dist/.
