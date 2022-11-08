@@ -4,7 +4,7 @@
  @copyright Reversense SAS
 
  */
-import {InterruptorGenericException} from "../common/InterruptorException";
+import {InterruptorGenericException} from "../common/InterruptorException.js";
 import {T, L} from  "../common/Types.js";
 import {X} from "../kernelapi/LinuxX64Flags.js";
 import {InterruptorAgent} from "../common/InterruptorAgent.js";
@@ -43,7 +43,7 @@ export class LinuxX64InterruptorFactory extends AbstractInterruptorFactory {
         LinuxX64InterruptorFactory.HOOKED_PTHREAD_ROUTINE = {};
         Interceptor.attach( Module.findExportByName("libc.so","pthread_create"), {
             onEnter: function(args){
-                let routine = args[2];
+                const routine = args[2];
 
                 if(routine != null && !LinuxX64InterruptorFactory.HOOKED_PTHREAD_ROUTINE.hasOwnProperty(routine)){
                     LinuxX64InterruptorFactory.HOOKED_PTHREAD_ROUTINE[routine+""]=true;

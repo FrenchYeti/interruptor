@@ -6,7 +6,7 @@ import {TypedData} from "../common/TypedData.js";
 import {SVC} from "../syscalls/LinuxAarch64Syscalls.js";
 import {IStringIndex} from "../utilities/IStringIndex.js";
 import {SyscallHandlersMap, SyscallMap} from "../syscalls/ISyscall.js";
-import {DebugUtils} from "../common/DebugUtils";
+import {DebugUtils} from "../common/DebugUtils.js";
 
 interface RichContextOptions extends Arm64CpuContext {
     _extra?:any;
@@ -54,7 +54,6 @@ SVC.map(x => {
     SVC_MAP_NUM[x[0]] = x;
 });
 
-let isExcludedFn:any = null;
 
 export const KAPI = {
     CONST: DEF,

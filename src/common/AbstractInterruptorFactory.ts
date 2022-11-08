@@ -6,7 +6,7 @@
  *  @class
  */
 import {TypeDef, TypeDefList} from "./TypeDef.js";
-import {InterruptorAgent} from "./InterruptorAgent";
+import {InterruptorAgent} from "./InterruptorAgent.js";
 
 
 export abstract class AbstractInterruptorFactory {

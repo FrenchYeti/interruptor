@@ -1,4 +1,4 @@
-import {L, T} from "../common/Types";
+import {L, T} from "../common/Types.js";
 
 export interface ParamSignature {
     t: T;
