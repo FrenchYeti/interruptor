@@ -1,0 +1,16 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  notify_codedoc:
+    runs-on: ubuntu-latest
+    steps:
+      - name: PING codedoc repository
+        run: |
+          curl -X POST https://api.github.com/repos/frenchyeti/interruptor-codedoc/dispatches \
+          -H 'Accept: application/vnd.github.everest-preview+json' \
+          -u ${{ secrets.INTERRUPTOR_CODEDOC_TOKEN }} \
+          --data '{"event_type": "build-doc", "client_payload": {}}'
