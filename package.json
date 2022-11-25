@@ -1,5 +1,5 @@
 {
-  "name": "@reversense/interruptor",
+  "name": "@rvrsns/interruptor",
   "version": "1.0.0",
   "description": "A Frida-based library for hook system call (and interrupts) and produce strace-like output ",
   "main": "index.ts",
@@ -9,6 +9,7 @@
     "*.ts"
   ],
   "scripts": {
+    "build": "npx tsc",
     "test": "mocha -r ts-node/register ./test/**/*.ts",
     "clean": "rm src/**/*.js src/**/*.d.ts"
   },
@@ -42,5 +43,8 @@
   },
   "directories": {
     "example": "examples"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   }
 }
