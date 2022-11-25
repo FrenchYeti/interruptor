@@ -105,25 +105,14 @@ export class LinuxAarch32InterruptorAgent extends InterruptorAgent{
         this.setupBuiltinHook();
     }
 
-    protected _updateScope(pScope:any):void {
-        switch ( this._policy.svc){
-            case F.INCLUDE_ANY:
-                isExcludedFn = (x)=>{ return (this._scope.svc.indexOf(x)>-1); };
-                break;
-            case F.EXCLUDE_ANY:
-                isExcludedFn = (x)=>{ return (this._scope.svc.indexOf(x)==-1);};
-                break;
-            case F.FILTER:
-                isExcludedFn = (x)=>{ return (this._scope.svc.i.indexOf(x)==-1 || this._scope.svc.e.indexOf(x)>-1);};
-                break;
-        }
-    }
 
-    /**
+
+    /*
      * To generate a filtered list of syscalls
      * @param {string[]} pSyscalls An array of syscall number
      * @method
      */
+    /*
     getSyscallList( pSyscalls:any ):any {
 
         const list = [];
@@ -162,7 +151,7 @@ export class LinuxAarch32InterruptorAgent extends InterruptorAgent{
         }
 
         return list;
-    }
+    }*/
 
     onSupervisorCall(pIntName:string, pHooks:any){
         const sc = SYSC_MAP_NAME[pIntName];
@@ -656,7 +645,8 @@ export class LinuxAarch32InterruptorAgent extends InterruptorAgent{
                 const n = context[CC.NR].toInt32();
 
                 if(context.dxc==null) context.dxc = {FD:{}};
-                if(isExcludedFn!=null && isExcludedFn(n)) return;
+                //if(isExcludedFn!=null && isExcludedFn(n)) return;
+                if(this.scope.syscalls!=null && this.scope.syscalls.isExcluded!=null && this.scope.syscalls.isExcluded(n)) return;
 
                 self.traceSyscallRet(context);
 
@@ -684,7 +674,8 @@ export class LinuxAarch32InterruptorAgent extends InterruptorAgent{
 
                 const n = context[CC.NR].toInt32();
 
-                if(isExcludedFn!=null && isExcludedFn(n)) return;
+                //if(isExcludedFn!=null && isExcludedFn(n)) return;
+                if(this.scope.syscalls!=null && this.scope.syscalls.isExcluded!=null && this.scope.syscalls.isExcluded(n)) return;
 
                 if(context.dxc==null) context.dxc = {FD:{}};
                 const hook = self.svc_hk[n];

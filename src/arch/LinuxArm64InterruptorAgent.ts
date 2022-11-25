@@ -89,10 +89,6 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
             if(o.hasOwnProperty(x))
                 f[x] = o[x];
         });
-
-        if(f.hasOwnProperty("syscalls") && f.syscalls != null){
-            f.svc = this.getSyscallList(f.syscalls);
-        }
     }*/
 
     configure(pConfig:any){
@@ -460,6 +456,13 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
         }
     }
 
+    /**
+     * Method executed before the syscall interruption
+     * if the syscall is not excluded
+     *
+     * @param pContext
+     * @param pHookCfg
+     */
     traceSyscall( pContext:any, pHookCfg:any = null){
 
         const sys = SVC_MAP_NUM[ pContext.x8.toInt32() ];
@@ -502,6 +505,13 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
         return s;
     }
 
+    /**
+     * To retrieve litteral ErrorCode from the numeric value inside a
+     * list of error code.
+     *
+     * @param {number} pErrRet Error code
+     * @param {any} pErrEnum The list of error codes
+     */
     getSyscallError( pErrRet:number, pErrEnum:any[]):any {
         for(let i=0; i<pErrEnum.length ; i++){
             if(pErrRet === -pErrEnum[i][0] ){
@@ -511,6 +521,20 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
         return pErrRet;
     }
 
+
+    /**
+     * Method executed AFTER the syscall interruption
+     * if the syscall is not excluded
+     *
+     * This method does several operations :
+     * - print the syscall trace
+     * - parse return value
+     * - process return value and correlating
+     *
+     * @param pContext
+     * @param pHookCfg
+     * @method
+     */
     traceSyscallRet( pContext:any, pHookCfg:any = null){
 
 

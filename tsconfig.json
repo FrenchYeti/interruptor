@@ -14,7 +14,9 @@
     "esModuleInterop": true,
     "types": [
       "node",
-      "frida-gum"
+      "frida-gum",
+      "chai",
+      "mocha"
 	]
   },
   "include": [
@@ -23,6 +25,8 @@
   ],
   "exclude": [
     "node_modules",
-    "**/*.spec.ts"
+    "**/*.spec.ts",
+    "./test/",
+    "./dist/"
   ]
 }

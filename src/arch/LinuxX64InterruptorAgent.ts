@@ -62,12 +62,13 @@ export class LinuxX64InterruptorAgent extends InterruptorAgent{
         this.configure(pConfig);
     }
 
-    /**
+    /*
      * To extend common filters
      *
      * @param pTypes
      * @param pOpts
      */
+    /*
     _setupDelegateFilters( pTypes:string, pOpts:any):void {
         if(pOpts == null) return;
 
@@ -82,7 +83,7 @@ export class LinuxX64InterruptorAgent extends InterruptorAgent{
         if(f.hasOwnProperty("syscalls") && f.syscalls != null){
             f.svc = this.getSyscallList(f.syscalls);
         }
-    }
+    }*/
 
     configure(pConfig:any){
         if(pConfig == null) return;
@@ -104,25 +105,13 @@ export class LinuxX64InterruptorAgent extends InterruptorAgent{
         this.setupBuiltinHook();
     }
 
-    protected _updateScope(pScope:any):void {
-        switch ( this._policy.svc){
-            case F.INCLUDE_ANY:
-                isExcludedFn = (x)=>{ return (this._scope.svc.indexOf(x)>-1); };
-                break;
-            case F.EXCLUDE_ANY:
-                isExcludedFn = (x)=>{ return (this._scope.svc.indexOf(x)==-1);};
-                break;
-            case F.FILTER:
-                isExcludedFn = (x)=>{ return (this._scope.svc.i.indexOf(x)==-1 || this._scope.svc.e.indexOf(x)>-1);};
-                break;
-        }
-    }
 
-    /**
+    /*
      * To generate a filtered list of syscalls
      * @param {string[]} pSyscalls An array of syscall number
      * @method
      */
+    /*
     getSyscallList( pSyscalls:any ):any {
 
         const list = [];
@@ -161,7 +150,7 @@ export class LinuxX64InterruptorAgent extends InterruptorAgent{
         }
 
         return list;
-    }
+    }*/
 
     onSupervisorCall(pIntName:string, pHooks:any){
         const sc = SYSC_MAP_NAME[pIntName];

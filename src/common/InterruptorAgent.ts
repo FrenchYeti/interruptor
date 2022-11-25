@@ -96,13 +96,6 @@ export class InterruptorAgent implements IStringIndex {
 
     types:any = {};
 
-    /*
-     * Filter type : include, equal, exclude
-     */
-    //_policy:any = {};
-
-    //_scope:any = {};
-
     /**
      * To use with startOnLoad()
      * A callback function executed when the modules specified in "startOnLoad" are loaded
