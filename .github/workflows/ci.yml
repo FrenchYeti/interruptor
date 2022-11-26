@@ -1,4 +1,4 @@
-name: ci
+name: Unit_Tests
 
 on:
   workflow_dispatch:
@@ -13,6 +13,5 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 16
-      - run: npm install -g webpack webpack-cli
       - run: npm install
-      - run: make all
+      - run: npm run test
