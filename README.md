@@ -1,6 +1,6 @@
 # Interruptor
 
-![ci](https://github.com/FrenchYeti/interruptor/workflows/ci/badge.svg)
+![ci](https://github.com/FrenchYeti/interruptor/workflows/CI/badge.svg)
 
 *Work In Progess*
 

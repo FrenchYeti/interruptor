@@ -14,8 +14,8 @@ jobs:
           node-version: 16
       - run: npm install
       - run: |
-          echo @frenchyeti:https://npm.pkg.github.com/ > ./.npmrc
-          echo '//npm.pkg.github.com/:_authToken=${NPM_TOKEN}' >> ./.npmrc
+          echo @reversense:https://registry.npmjs.org/ > ./.npmrc
+          echo '//registry.npmjs.org/:_authToken=${NPM_TOKEN}' >> ./.npmrc
       - run: npm publish
         env:
-          NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN_FOR_GH }}

@@ -1,4 +1,4 @@
-name: Unit_Tests
+name: CI
 
 on:
   workflow_dispatch:
