@@ -4,7 +4,7 @@ import {F} from "./Types.js";
 
 export class DebugUtils {
 
-    static getPolicyName(pPolicy:F):string{
+    static getPolicyName(pPolicy:any):string{
         switch (pPolicy){
             case F.EXCLUDE_ANY:
                 return "EXCLUDE_ANY";
@@ -34,7 +34,7 @@ export class DebugUtils {
      * @param pScope
      */
     static printScope( pAgent:InterruptorAgent, pScope:string):void {
-        if(pAgent.scope!=null && pScope!=null && pAgent.scope[pScope]!=null){
+        if(pAgent!=null && pAgent.scope!=null && pScope!=null && pAgent.scope[pScope]!=null){
 
             const policy = (pAgent.scope[pScope]._policy!=null ? pAgent.scope[pScope]._policy : F.INCLUDE_ANY);
             let m:string;

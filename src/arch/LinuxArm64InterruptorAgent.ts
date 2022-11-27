@@ -686,7 +686,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
         const m = Process.findModuleByAddress(pInstruction.address)
 
         // debug
-        if(this.debug.stalker){
+        if(this.debug.stalker && m!=null){
             console.log("["+pInstruction.address+" : "+m.name+" "+(pInstruction.address.sub(m.base))+"] > "+Instruction.parse(pInstruction.address));
         }
 

@@ -271,6 +271,8 @@ export class InterruptorAgent implements IStringIndex {
 
         const list:number[] = [];
 
+        if(this.interrupts==null || this.interrupts.syscalls==null) return list;
+
         switch(typeof pSyscalls){
             case "string":
                 this.interrupts.syscalls.map(x => { if(x[1]==pSyscalls) list.push(x[SyscallInfo.NUM]); });
