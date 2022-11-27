@@ -16,6 +16,7 @@ jobs:
       - run: |
           echo @reversense:https://registry.npmjs.org/ > ./.npmrc
           echo '//registry.npmjs.org/:_authToken=${NPM_TOKEN}' >> ./.npmrc
+      - run: npx tsc
       - run: npm publish --access public
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN_FOR_GH }}
