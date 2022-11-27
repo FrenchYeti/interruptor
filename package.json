@@ -6,7 +6,8 @@
   "type": "module",
   "files": [
     "src/**/*.ts",
-    "*.ts"
+    "*.ts",
+    "*.js"
   ],
   "scripts": {
     "build": "npx tsc",
