@@ -25,7 +25,7 @@ It provides by default some useful features such as :
 * Filterable modules and syscalls
 * Coverage generation
 
-
+Full documentation of tha API is available here : [Interruptor Doc](https://frenchyeti.github.io/interruptor-codedoc/index.html)
 
 ## 1. How to use
 
