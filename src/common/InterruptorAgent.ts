@@ -10,8 +10,8 @@ let CTR = 0;
 export type InterruptSignature = SyscallSignature;
 
 export interface InterruptSignatureMap {
-    syscalls?: SyscallSignature[],
-    [type:string] :InterruptSignature[]
+    syscalls: SyscallSignature[] | null,
+    [type:string] :InterruptSignature[] | null
 }
 
 export interface DebugOptions {
@@ -39,7 +39,7 @@ export interface Scope {
 export interface ScopeMap {
     modules:Scope|null;
     syscalls:Scope|null;
-    ranges?:Scope|null;
+    ranges:Scope|null;
     [customScope:string] :Scope|null;
 }
 
@@ -132,11 +132,18 @@ export class InterruptorAgent implements IStringIndex {
      * @param {any} pConfig Options
      * @constructor
      */
-    constructor( pOptions:any, pDoFollowThread:any = null, pInterrupts:InterruptSignatureMap = {}) {
+    constructor( pOptions:any, pDoFollowThread:any = null, pInterrupts:InterruptSignatureMap = null) {
         this.uid = CTR++;
         this.emulator = false;
         this._do_ft = pDoFollowThread;
-        this.interrupts = pInterrupts;
+        if(pInterrupts != null){
+            this.interrupts = pInterrupts;
+        }else{
+            this.interrupts = {
+                syscalls: null
+            }
+        }
+
         this.scope = pOptions.scope;
         this.parseOptions(pOptions);
         //this.scope = this.scope;
