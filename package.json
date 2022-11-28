@@ -1,11 +1,13 @@
 {
   "name": "@reversense/interruptor",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "A Frida-based library for hook system call (and interrupts) and produce strace-like output ",
   "main": "index.js",
   "type": "module",
   "files": [
     "src/**/*.d.ts",
+    "src/**/*.js",
+    "*.d.ts",
     "*.js"
   ],
   "scripts": {
