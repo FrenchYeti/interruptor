@@ -1,4 +1,4 @@
-name: Refresh_CodeDoc
+name: CodeDoc
 
 on:
   push:
