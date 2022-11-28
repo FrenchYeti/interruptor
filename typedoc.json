@@ -1,0 +1,10 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": [
+    "./index.ts",
+    "./index.linux.arm64.ts",
+    "./index.linux.aarch32.ts",
+    "./index.linux.x64.ts"
+  ],
+  "out": "doc"
+}
