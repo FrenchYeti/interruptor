@@ -25,34 +25,73 @@ It provides by default some useful features such as :
 * Filterable modules and syscalls
 * Coverage generation
 
-Full documentation of tha API is available here : [Interruptor Doc](https://frenchyeti.github.io/interruptor-codedoc/index.html)
+### Full documentation of the API is [now available](https://frenchyeti.github.io/interruptor-codedoc/index.html)
 
-## 1. How to use
+## 1. How to use it
 
-In fact, install is not necessary. Just include the released minified JS file corresponding to your target os/arch into your Frida agent's script. Or call it throuh Frida's Codeshare.
+Interruptor can be used by following different approach. I Hope you will be able to find the best one for you :
 
+- A. Interruptor as NPM package in your hooking project
+- B. Importing minified file per architecture/os 
+- C. Using Frida's CodeShare (not yet configurable, less suitable for tampering)
+- C. From source
 
-### 1.A Using Frida's Codeshare (without configuration)
+### Case A : Using Interruptor package
 
-Warning : this methods don't allow you to configure Interruptor. So, tracing of obfuscated or multi-threaded application could failed.
+**It is the BEST and more reliable way to use Interruptor** 
 
-This method is only  provided for training purpose.
+This method require Frida >= 16.x is you write your hook in Typescript.
+
+Basically, create a new folder for your hooks or move into your workspace :
 ```
-frida --codeshare FrenchYeti/android-arm64-strace -f YOUR_BINARY
+mkdir my_workspace && cd my_workspace
 ```
 
+And install the package :
+````
+npm install @reversense/interruptor
+````
 
-### 1.A From latest release (for version <= 0.2)
+After successful install, you can create a basic script (`script.ts`) like it (TypeScript) :
+```
+import target from '@reversense/interruptor/index.linux.arm64.js';
+
+const Interruptor = target.LinuxArm64({});
+
+Interruptor.newAgentTracer({
+    followThread: true,
+    scope: {
+        syscalls: {
+            exclude:  [/clock_gettime/]
+        },
+        modules: {
+            exclude: [/linker/]
+        }
+    },
+    onStart: function(){
+        console.log("Entering into lib")
+    }
+}).start();
+```
+
+Then, just launch your frida script like this :
+```
+frida -U -l ./script.ts -f <YOUR_APP>
+```
+
+May be you noted TS script is passed directly to `frida` instead of `frida-compile`, such thing is possible with Frida >= 16.x .
+
+### Case B : From minified files
 
 **Requirements :**
 
 * frida
 
-Donwload [latest release](https://github.com/FrenchYeti/interruptor/releases) for your architecture into your working directory, 
+Download [latest release](https://github.com/FrenchYeti/interruptor/releases) for your architecture into your working directory, 
 and do:
 
 ```
-import target from './index.linux.arm64.js';
+import target from './index.linux.arm64.min.js';
 import {DebugUtils} from "./src/common/DebugUtils.js";
 
 const Interruptor = target.LinuxArm64({});
@@ -72,27 +111,68 @@ Interruptor.newAgentTracer({
 
 Time to deploy hooks can be configured to be when a particular library is loaded. See options below.
 
-### 1.C From source
+
+### Case C : Using Frida's Codeshare (not yet configurable)
+
+**Warning : this methods don't allow you to configure Interruptor. So, tracing of obfuscated or multi-threaded application could fail.**
+
+This method is only provided for linux/arm64 and training purpose.
+```
+frida --codeshare FrenchYeti/android-arm64-strace -f YOUR_BINARY
+```
+
+### Case D : From source
 
 **Requirements :**
 
 * frida
 
-Only from source for now (will move to NPM ASAP)
+Don't be afraid by dependencies : Interruptor has only common dev dependencies to provide types and unit test features. 
+
+Download or clone the repository, and install it
 ```
 git clone https://github.com/FrenchYeti/interruptor
 cd interruptor
 npm install
+npm run build
 ```
+
+When it is done, just copy one of examples into repository root folder :
+```
+cp ./examples/android/simple_trace.ts .
+```
+
 
 And finally :
 ```
-frida -U -l ./examples/simple_strace.ts -f <PACKAGE> 
+frida -U -l ./simple_strace.ts -f <PACKAGE> 
 ```
+
+
 
 ## 2. Examples
 
-### 2.A Simple tracing (<=0.2)
+### 2.A Simple tracing 
+
+#### With recent version (> 0.2)
+Simple tracing without hook from attach moment, with excluded module and syscall (by name)
+```
+import target from '@reversense/interruptor/index.linux.arm64.js';
+
+const Interruptor = target.LinuxArm64({});
+
+// better results, when app is loaded
+Java.perform(()=>{
+    Interruptor.newAgentTracer({
+        scope: {
+            syscalls: { exclude:  ["clock_gettime"] },
+            modules: { exclude: [/linker64/] }
+        }
+    }).start();
+});
+```
+
+#### With version <= 0.2
 Simple tracing without hook from attach moment, with excluded module and syscall (by name)
 ```
 var Interruptor = require('./android-arm64-strace.min.js').target.LinuxArm64();
@@ -106,26 +186,61 @@ Java.perform(()=>{
         }
     }).start();
 });
-
-
 ```
+
+#### Output :
 
 Output :
 ```
-[/system/lib64/libc.so +0x3cc]   SVC :: 0x38   openat ( int dfd = 0xffffff9c , filename = /dev/ashmem , int flags = 0x80002 , umode_t mode = 0x0 ,  )    > (FD) 0x1f
-[/system/lib64/libc.so +0x834]   SVC :: 0x50   fstat ( fd = 0x1f  /dev/ashmem   , struct __old_kernel_stat *statbuf = 0x7ffc01bdc8 ,  )    > 0x0
-[/system/lib64/libc.so +0x3b4]   SVC :: 0x1d   ioctl ( fd = 0x1f  /dev/ashmem   , unsigned int cmd = 0x41007701 , unsigned long arg = 0x7ffc01be98 ,  )    > 0x0
-[/system/lib64/libc.so +0x3b4]   SVC :: 0x1d   ioctl ( fd = 0x1f  /dev/ashmem   , unsigned int cmd = 0x40087703 , unsigned long arg = 0x2000 ,  )    > 0x0
-[/system/lib64/libc.so +0xc24]   SVC :: 0xde   mmap ( addr = 0x0 , length = 0x2000 , prot = PROT_READ | PROT_WRITE   , int flags = 0x2 , fd = 0x1f  /dev/ashmem   , offset = 0x0 ,  )    > 0x76b45ab000
-[/system/lib64/libc.so +0x174]   SVC :: 0x39   close ( fd = 0x1f  /dev/ashmem   ,  )    > 0x0
-[/system/lib64/libc.so +0xc24]   SVC :: 0xde   mmap ( addr = 0x0 , length = 0x106000 , prot = PROT_READ | PROT_WRITE   , int flags = 0x4022 , fd = 0xffffffff  undefined   , offset = 0x0 ,  )    > 0x7611e6b000
-[/system/lib64/libc.so +0xc54]   SVC :: 0xe2   mprotect ( unsigned long start = 0x7611e6b000 , size_t len = 0x1000 , unsigned long prot = 0x0 ,  )    > 0x0
-[/system/lib64/libc.so +0xd14]   SVC :: 0xa7   prctl ( int option = 0x53564d41 , unsigned long arg2 = 0x0 , unsigned long arg3 = 0x7611e6b000 , unsigned long arg4 = 0x1000 , unsigned long arg5 = 0x76b72f3798 ,  )    > 0x0
-[/system/lib64/libc.so +0xc24]   SVC :: 0xde   mmap ( addr = 0x0 , length = 0x5000 , prot = PROT_NONE   , int flags = 0x22 , fd = 0xffffffff  undefined   , offset = 0x0 ,  )    > 0x762f440000
-[/system/lib64/libc.so +0xd14]   SVC :: 0xa7   prctl ( int option = 0x53564d41 , unsigned long arg2 = 0x0 , unsigned long arg3 = 0x762f440000 , unsigned long arg4 = 0x5000 , unsigned long arg5 = 0x76b72f35cc ,  )    > 0x0
-[/system/lib64/libc.so +0xc54]   SVC :: 0xe2   mprotect ( unsigned long start = 0x762f441000 , size_t len = 0x3000 , unsigned long prot = 0x3 ,  )    > 0x0
-[/system/lib64/libc.so +0xd14]   SVC :: 0xa7   prctl ( int option = 0x53564d41 , unsigned long arg2 = 0x0 , unsigned long arg3 = 0x762f441000 , unsigned long arg4 = 0x3000 , unsigned long arg5 = 0x76b72f360e ,  )    > 0x0
-[/system/lib64/libc.so +0x1f28]   SVC :: 0xdc   clone ( unsigned long = 0x3d0f00 , unsigned long = 0x7611f704e0 , int * = 0x7611f70500 , int * = 0x7611f70588 , unsigned long = 0x7611f70500 ,  )    > 0x6ae
+	------- [TID=4407][libutils.so][0x76d9fd6388] Thread routine start -------
+	[INTERRUPTOR][STARTING] Tracing thread 4407 []
+	[STARTING TRACE] UID=1 Thread 4407
+ [TID=4407] [/system/lib64/libc.so +0x630]   setpriority (   which = NULL ,  who = 0x0 ,  ioprio = 0x0  )    > 0x0
+ [TID=4407] [/system/lib64/libc.so +0x928]   openat (   dfd = AT_FDCWD  ,  filename = /proc/4407/timerslack_ns ,  flags = O_RDONLY | O_WRONLY | O_CLOEXEC ,  mode =   )    > (FD) 0x1f
+ [TID=4407] [/system/lib64/libc.so +0x990]   write (   fd = 31  /proc/4407/timerslack_ns   ,  buf = 50000 ,  size = 0x5  )    > 0x5
+ [TID=4407] [/system/lib64/libc.so +0x6d0]   close (   fd = 31  /proc/4407/timerslack_ns    )    > 0x0
+ [TID=4407] [/system/lib64/libc.so +0x270]   prctl (   opt = PR_SET_NAME ,  arg2 = 0x7651d1d560 ,  arg3 = 0x0 ,  arg4 = 0x0 ,  arg5 = 0x0  )    > 0x0
+ [TID=4407] [/system/lib64/libc.so +0x1b0]   mprotect (   addr = 0x7641dae000 ,  size = 0x1000 ,  prot = PROT_NONE  )    > 0 SUCCESS
+ [TID=4407] [/system/lib64/libc.so +0xf0]   madvise (   addr = 0x7641dae000 ,  size = 0xfb000 ,  behavior = MADV_DONTNEED  )    > 0 SUCCESS
+ [TID=4407] [/system/lib64/libc.so +0x928]   openat (   dfd = AT_FDCWD  ,  filename = /dev/ashmem ,  flags = O_RDONLY | O_RDWR | O_CLOEXEC ,  mode =   )    > (FD) 0x1f
+ [TID=4407] [/system/lib64/libc.so +0xd90]   fstat (   fd = 31  /dev/ashmem   ,  *statbuf = 0x7641ea9e68  )    > 0x0
+ [TID=4407] [/system/lib64/libc.so +0x910]   ioctl (   fd = 31  /dev/ashmem   ,  cmd = 0x41007701 ,  arg = 0x7641ea9f38  )    > 0x0
+ [TID=4407] [/system/lib64/libc.so +0x910]   ioctl (   fd = 31  /dev/ashmem   ,  cmd = 0x40087703 ,  arg = 0x2000  )    > 0x0
+ [TID=4407] [/system/lib64/libc.so +0x180]   mmap (   start_addr = 0x0 ,  size = 0x2000 ,  prot = PROT_READ | PROT_WRITE ,  flags = MAP_PRIVATE ,  fd = undefined ,  offset = 0x0  )    > 0x76599ee000 SUCCESS
+ [TID=4407] [/system/lib64/libc.so +0x6d0]   close (   fd = 31  /dev/ashmem    )    > 0x0
+ [TID=4407] [/system/lib64/libc.so +0x1b0]   mprotect (   addr = 0x12f80000 ,  size = 0x40000 ,  prot = PROT_READ | PROT_WRITE  )    > 0 SUCCESS
+ [TID=4407] [/system/lib64/libc.so +0x8e0]   getpriority (   which = NULL ,  who = 0x0  )    > 0x14
+ [TID=4407] [/system/lib64/libc.so +0x270]   prctl (   opt = PR_SET_NAME ,  arg2 = 0x7641eaa148 ,  arg3 = 0x343a7265646e6942 ,  arg4 = 0x315f363833 ,  arg5 = 0x28  )    > 0x0
+ [TID=4407] [/system/lib64/libc.so +0xf70]   getuid (  )    > 10089
+ [TID=4407] [/system/lib64/libc.so +0x910]   ioctl (   fd = 12  undefined   ,  cmd = 0xc0306201 ,  arg = 0x7641eaa2b8  )    > 0x0
+ [TID=4407] [/system/lib64/libc.so +0x180]   mmap (   start_addr = 0x0 ,  size = 0xfe000 ,  prot = PROT_READ | PROT_WRITE ,  flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE ,  fd = undefined ,  offset = 0x0  )    > 0x7641263000 SUCCESS
+ [TID=4407] [/system/lib64/libc.so +0x1b0]   mprotect (   addr = 0x7641263000 ,  size = 0x1000 ,  prot = PROT_NONE  )    > 0 SUCCESS
+ [TID=4407] [/system/lib64/libc.so +0x270]   prctl (   opt = PR_SET_VMA ,  arg2 = 0x0 ,  arg3 = 0x7641263000 ,  arg4 = 0x1000 ,  arg5 = 0x76de1b64c5  )    > 0x0
+ [TID=4407] [/system/lib64/libc.so +0x180]   mmap (   start_addr = 0x0 ,  size = 0x5000 ,  prot = PROT_NONE ,  flags = MAP_PRIVATE | MAP_ANONYMOUS ,  fd = undefined ,  offset = 0x0  )    > 0x76599e9000 SUCCESS
+ [TID=4407] [/system/lib64/libc.so +0x270]   prctl (   opt = PR_SET_VMA ,  arg2 = 0x0 ,  arg3 = 0x76599e9000 ,  arg4 = 0x5000 ,  arg5 = 0x76de1b62f9  )    > 0x0
+ [TID=4407] [/system/lib64/libc.so +0x1b0]   mprotect (   addr = 0x76599ea000 ,  size = 0x3000 ,  prot = PROT_READ | PROT_WRITE  )    > 0 SUCCESS
+ [TID=4407] [/system/lib64/libc.so +0x270]   prctl (   opt = PR_SET_VMA ,  arg2 = 0x0 ,  arg3 = 0x76599ea000 ,  arg4 = 0x3000 ,  arg5 = 0x76de1b633b  )    > 0x0
+ [TID=4407] [/system/lib64/libc.so +0x1ca8]   clone (   unsigned long = 0x3d0f00 ,  unsigned long = 0x76413604e0 ,  int * = 0x7641360500 ,  int * = 0x7641360588 ,  unsigned long = 0x7641360500  )    > 0x1139
+ [TID=4407] [/system/lib64/libc.so +0x2c]   futex (   word = 0x7641360570 ,  op = FUTEX_WAKE_PRIVATE ,  u32 val = 0x1 ,  *utime = 0x0 ,  u32 *uaddr2 = 0x0 ,  u32 val3[ = 0x0  )    > 0x1
+ [TID=4407] [/system/lib64/libc.so +0x2c]   futex (   word = 0x7659b1c248 ,  op = FUTEX_WAKE_PRIVATE ,  u32 val = 0x7fffffff ,  *utime = 0x0 ,  u32 *uaddr2 = 0x0 ,  u32 val3[ = 0x0  )    > 0x0
+
+	------- [TID=4409][libutils.so][0x76d9fd6388] Thread routine start -------
+	[INTERRUPTOR][STARTING] Tracing thread 4409 []
+	[STARTING TRACE] UID=2 Thread 4409
+ [TID=4409] [/system/lib64/libc.so +0x630]   setpriority (   which = NULL ,  who = 0x0 ,  ioprio = 0x0  )    > 0x0
+ [TID=4409] [/system/lib64/libc.so +0x928]   openat (   dfd = AT_FDCWD  ,  filename = /proc/4409/timerslack_ns ,  flags = O_RDONLY | O_WRONLY | O_CLOEXEC ,  mode =   )    > (FD) 0x1f
+ [TID=4409] [/system/lib64/libc.so +0x990]   write (   fd = 31  /proc/4409/timerslack_ns   ,  buf = 50000 ,  size = 0x5  )    > 0x5
+ [TID=4409] [/system/lib64/libc.so +0x6d0]   close (   fd = 31  /proc/4409/timerslack_ns    )    > 0x0
+ [TID=4409] [/system/lib64/libc.so +0x270]   prctl (   opt = PR_SET_NAME ,  arg2 = 0x765364f010 ,  arg3 = 0x0 ,  arg4 = 0x0 ,  arg5 = 0x0  )    > 0x0
+ [TID=4409] [/system/lib64/libc.so +0x1b0]   mprotect (   addr = 0x7641264000 ,  size = 0x1000 ,  prot = PROT_NONE  )    > 0 SUCCESS
+ [TID=4409] [/system/lib64/libc.so +0xf0]   madvise (   addr = 0x7641264000 ,  size = 0xfb000 ,  behavior = MADV_DONTNEED  )    > 0 SUCCESS
+ [TID=4409] [/system/lib64/libc.so +0x928]   openat (   dfd = AT_FDCWD  ,  filename = /dev/ashmem ,  flags = O_RDONLY | O_RDWR | O_CLOEXEC ,  mode =   )    > (FD) 0x1f
+ [TID=4409] [/system/lib64/libc.so +0xd90]   fstat (   fd = 31  /dev/ashmem   ,  *statbuf = 0x764135fe68  )    > 0x0
+ [TID=4409] [/system/lib64/libc.so +0x910]   ioctl (   fd = 31  /dev/ashmem   ,  cmd = 0x41007701 ,  arg = 0x764135ff38  )    > 0x0
+ [TID=4409] [/system/lib64/libc.so +0x910]   ioctl (   fd = 31  /dev/ashmem   ,  cmd = 0x40087703 ,  arg = 0x2000  )    > 0x0
+ [TID=4409] [/system/lib64/libc.so +0x180]   mmap (   start_addr = 0x0 ,  size = 0x2000 ,  prot = PROT_READ | PROT_WRITE ,  flags = MAP_PRIVATE ,  fd = undefined ,  offset = 0x0  )    > 0x7656380000 SUCCESS
+ [TID=4409] [/system/lib64/libc.so +0x6d0]   close (   fd = 31  /dev/ashmem    )    > 0x0
+ [TID=4409] [/system/lib64/libc.so +0x1b0]   mprotect (   addr = 0x12fc0000 ,  size = 0x40000 ,  prot = PROT_READ | PROT_WRITE  )    > 0 SUCCESS
 ```
 
 More complete example are provided into examples directory.
@@ -134,8 +249,8 @@ More complete example are provided into examples directory.
 
 ```
 Interruptor.newAgentTracer({
-    exclude: {
-        syscalls: ["clock_gettime"]
+    scope: {
+        syscalls: { exclude:  ["clock_gettime"] }
     },
     svc: {
          read: {
@@ -157,8 +272,8 @@ Interruptor.newAgentTracer({
 
 ```
 Interruptor.newAgentTracer({
-    exclude: {
-        syscalls: ["clock_gettime"]
+    scope: {
+        syscalls: { exclude:  ["clock_gettime"] }
     },
     coverage: {
         enabled: true,

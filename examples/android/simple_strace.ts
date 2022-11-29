@@ -1,4 +1,4 @@
-import target from '../../index.linux.arm64.js';
+import target from './index.linux.arm64.js';
 
 const Interruptor = target.LinuxArm64({});
 
