@@ -1,3 +1,4 @@
+import {ErrorCodeList} from "../common/Types";
 
 
 export const K = {
@@ -857,7 +858,7 @@ export const MSG = {
     MSG_COPY: [0o040000]
 }
 //
-export const E = {
+export const E:ErrorCodeList = {
 	EPERM : [1,"Not super-user"],
 	ENOENT : [2,"No such file or directory"],
 	ESRCH : [3,"No such process"],
@@ -1020,7 +1021,7 @@ export const I = {
 export const ERR = {};
 
 for(const k in E){
-    E[k].push(k);
+    E[k][2] = k;
     ERR[k] = E[k][0];
 }
 

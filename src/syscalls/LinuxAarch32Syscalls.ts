@@ -1,6 +1,6 @@
 import * as DEF from "../kernelapi/LinuxArm64Flags.js";
-import {TypedData} from "../common/TypedData.js";
-import {L, T} from "../common/Types.js";
+import {TypedData, TypedDataMap} from "../common/TypedData.js";
+import {L, SyscallOutMap, SyscallSignature, T} from "../common/Types.js";
 
 const E = DEF.E;
 const X = DEF.X;
@@ -11,7 +11,7 @@ const _ = TypedData.from;
 export const IDSTRUCTS = {};
 
 // arguments template
-const A = {
+const A:TypedDataMap = {
     DFD: _({t: T.INT32, n:"dfd", l:L.DFD}),
     OLD_DFD: _({t: T.INT32, n:"old_dfd", l:L.DFD}),
     NEW_DFD: _({t: T.INT32, n:"new_dfd", l:L.DFD}),
@@ -111,7 +111,7 @@ const A = {
 
 A.SIGMASK.update({ f:A.SIG, len:16 });
 
-const RET:any = {
+const RET:SyscallOutMap = {
     INFO: {t:T.INT32, e:[E.EAGAIN,E.EINVAL,E.EPERM]},
     ACCESS: {t:T.INT32, e:[E.EACCES, E.EFAULT, E.EINVAL, E.ELOOP, E.ENAMETOOLONG, E.ENOENT, E.ENOMEM, E.ENOTDIR, E.EOVERFLOW, E.EIO, E.ETXTBSY, E.EROFS]},
     STAT: {t:T.INT32, e:[E.EACCES, E.EBADF, E.EFAULT, E.EINVAL, E.ELOOP, E.ENAMETOOLONG, E.ENOENT, E.ENOMEM, E.ENOTDIR, E.EOVERFLOW]},
@@ -129,7 +129,7 @@ RET.LINKAT = {t:T.INT32, e:RET.LINK.e.concat([E.EBADF, E.ENOTDIR]) };
 RET.IO = {t:T.INT32, e:RET.INFO.e.concat([E.EBADF, E.EFAULT, E.ENOSYS]) };
 
 
-export const SWI = [
+export const SWI:SyscallSignature[] = [
     [0,"io_setup",0x00,[{t:T.UINT32, n:"nr_reqs"},{t:T.POINTER64, n:"aio_context_t *ctx"}]],
     [1,"io_destroy",0x01,[A.AIO],RET.IO],
     [2,"io_submit",0x02,[A.AIO,{t:T.LONG, n:"nr"},{t:T.POINTER64, n:"struct iocb **iocbpp"}],RET.IO],
@@ -155,7 +155,7 @@ export const SWI = [
     [22,"epoll_pwait",0x16,[A.EPFD,A.EPEV,{t:T.INT32, n:"maxevents"},{t:T.INT32, n:"timeout"},{t:T.POINTER64, n:"const sigset_t *sigmask", c:true }]],
     [23,"dup",0x17,[A.FD],{t:T.UINT32, n:"fd", l:L.FD, e:[E.EBADF, E.EBUSY, E.EINTR, E.EINVAL, E.EMFILE]}],
     [24,"dup3",0x18,[{t:T.UINT32, n:"old_fd", l:L.FD},{t:T.UINT32, n:"old_fd", l:L.FD}, {t:T.INT32, n:"flags", l:L.FLAG}],{t:T.UINT32, n:"fd", l:L.FD, e:[E.EBADF, E.EBUSY, E.EINTR, E.EINVAL, E.EMFILE]}],
-    [25,"fcntl",0x19,[A.FD,{t:T.UINT32, n:"cmd", l:L.FLAG, f:X.FNCTL} ,{t:T.ULONG, n:"args", l:L.FLAG, r:"x1", f:X.FCNTL_ARGS}], {t:T.INT32, n:"ret", r:"x1", l:L.FLAG, f:X.FCNTL_RET}],
+    [25,"fcntl",0x19,[A.FD,{t:T.UINT32, n:"cmd", l:L.FLAG, f:X.FNCTL} ,{t:T.ULONG, n:"args", l:L.FLAG, r:"x1", f:X.FCNTL_ARGS}], {t:T.INT32, n:"ret", r:"x1", l:L.FLAG, f:X.FCNTL_RET, e:[] }],
     [26,"inotify_init1",0x1a,[{t:T.INT32, n:"flags", l:L.FLAG, f:X.INOTIFY_FLAGS}],{t:T.INT32, e:[E.EMFILE,E.EINVAL,E.ENFILE,E.ENOMEM]}],
     [27,"inotify_add_watch",0x1b,[A.FD,A.CONST_PATH,{t:T.UINT32, n:"mask", l:L.FLAG, f:X.INOTIFY_MASK}],A.WD.asReturn([E.EACCES,E.EBADF,E.EEXIST,E.EFAULT,E.EINVAL,E.ENAMETOOLONG,E.ENOENT,E.ENOMEM,E.ENOSPC,E.ENOTDIR])],
     [28,"inotify_rm_watch",0x1c,[A.FD,A.WD],{t:T.INT32, e:[E.EBADF,E.EINVAL]}],
@@ -193,7 +193,7 @@ export const SWI = [
     [60,"quotactl",0x3c,["unsigned int cmd",A.CONST_NAME.copy("special"),"qid_t id","void *addr"]],
     [61,"getdents64",0x3d,[{t:T.UINT32, n:"fd", l:L.FD},{t:T.POINTER64, n:"linux_dirent64 *dirent", l:L.DSTRUCT, f:"linux_dirent64"},A.SIZE]],
     [62,"lseek",0x3e,[A.FD,A.OFFSET,{t:T.UINT32, n:"whence", l:L.FLAG, f:X.SEEK}]],
-    [63,"read",0x3f,[A.FD, A.OUTPUT_CHAR_BUFFER, {t:T.UINT32, n:"count", l:L.SIZE}], {t:T.UINT32, r:1, n:"sz", l:L.SIZE}],
+    [63,"read",0x3f,[A.FD, A.OUTPUT_CHAR_BUFFER, {t:T.UINT32, n:"count", l:L.SIZE}], {t:T.UINT32, r:1, n:"sz", l:L.SIZE, e:[]}],
     [64,"write",0x40,[A.FD,{t:T.CHAR_BUFFER, n:"buf", c:true},A.SIZE]],
     [65,"readv",0x41,[A.FD,A.IOVEC,A.LEN]],
     [66,"writev",0x42,[A.FD,A.IOVEC,A.LEN]],
@@ -226,7 +226,7 @@ export const SWI = [
     [93,"exit",0x5d,[{ t:T.INT32, n:"status" }]],
     [94,"exit_group",0x5e,[{ t:T.INT32, n:"status" }]],
     [95,"waitid",0x5f,[{ t:T.INT32, n:"type_id", l:L.FLAG, f:X.TYPEID},{t:T.UINT32, n:"id"},A.SIGINFO,"int options",A.RUSAGE ]],
-    [96,"set_tid_address",0x60,[{t:T.POINTER32, n:"*tidptr"}],A.CALLER_TID],
+    [96,"set_tid_address",0x60,[{t:T.POINTER32, n:"*tidptr"}],A.CALLER_TID.asReturn()],
     [97,"unshare",0x61,[{ t:T.INT32, n:"flags", l:L.FLAG, f:X.CLONE}]],
     [98,"futex",0x62,[ {t:T.UINT32, n:"word", l:L.FUTEX},{ t:T.INT32, n:"op", l:L.FLAG, f:X.FUTEX_OPE}, "u32 val",A.KERNEL_TIMESPEC.copy("*utime"),"u32 *uaddr2","u32 val3["]],
     [99,"set_robust_list",0x63,[A.ROBUST_LH,A.LEN]],
@@ -302,12 +302,12 @@ export const SWI = [
     [169,"gettimeofday",0xa9,[A.TIMEVAL, A.TIMEZONE]],
     [170,"settimeofday",0xaa,[A.TIMEVAL, A.TIMEZONE]],
     [171,"adjtimex",0xab,[A.KTIMEX]],
-    [172,"getpid",0xac,[],A.PID],
-    [173,"getppid",0xad,[],A.PID],
-    [174,"getuid",0xae,[],A.UID],
-    [175,"geteuid",0xaf,[],A.UID],
-    [176,"getgid",0xb0,[],A.GID],
-    [177,"getegid",0xb1,[],A.GID],
+    [172,"getpid",0xac,[],A.PID.asReturn()],
+    [173,"getppid",0xad,[],A.PID.asReturn()],
+    [174,"getuid",0xae,[],A.UID.asReturn()],
+    [175,"geteuid",0xaf,[],A.UID.asReturn()],
+    [176,"getgid",0xb0,[],A.GID.asReturn()],
+    [177,"getegid",0xb1,[],A.GID.asReturn()],
     [178,"gettid",0xb2,[]],
     [179,"sysinfo",0xb3,[A.SYSINFO]],
     [180,"mq_open",0xb4,[A.CONST_NAME,A.OFLAGS,A.OMODE, A.MQ_ATTR]],
@@ -419,7 +419,7 @@ export const SWI = [
     [286,"preadv2",0x11e,[A.LFD,A.IOVEC,A.LEN,A.LOFFSET,A.RWF]],
     [287,"pwritev2",0x11f,[A.LFD,A.IOVEC,A.LEN,A.LOFFSET,A.RWF]],
     [288,"pkey_mprotect",0x120,[A.ADDR,A.SIZE,A.MPROT,A.PKEY]],
-    [289,"pkey_alloc",0x121,["unsigned long RESERVED flags",{t:T.ULONG, n:"access_rights", l:L.FLAG, f:X.PKEY_ACL }],A.PKEY],
+    [289,"pkey_alloc",0x121,["unsigned long RESERVED flags",{t:T.ULONG, n:"access_rights", l:L.FLAG, f:X.PKEY_ACL }],A.PKEY.asReturn()],
     [290,"pkey_free",0x122,[A.PKEY]],
     [291,"statx",0x123,[A.DFD, A.CONST_PATH,A.ACCESS_FLAGS,"unsigned mask",A.STATX ]]
 ];

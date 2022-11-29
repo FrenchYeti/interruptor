@@ -83,7 +83,7 @@ export class LinuxAarch32InterruptorFactory extends AbstractInterruptorFactory {
     }
 
 
-    newStandaloneTracer(){
+    newStandaloneTracer():InterruptorAgent{
         return null ;
     }
 

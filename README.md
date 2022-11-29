@@ -145,7 +145,7 @@ cp ./examples/android/simple_trace.ts .
 
 And finally :
 ```
-frida -U -l ./simple_strace.ts -f <PACKAGE> 
+frida -U -l ./simple_strace.arm64.ts -f <PACKAGE> 
 ```
 
 

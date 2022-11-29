@@ -1,4 +1,4 @@
-import {T} from "./Types.js";
+import {SyscallInOutInfo, SyscallOutInfo, SyscallOutMap, T} from "./Types.js";
 import {IStringIndex} from "../utilities/IStringIndex.js";
 
 export enum VAL_TYPE {
@@ -10,13 +10,13 @@ export enum VAL_TYPE {
 /**
  * @class
  */
-export class TypedData implements IStringIndex {
+export class TypedData implements SyscallInOutInfo {
     /**
      * Data type
      * See T
      * @field {string}
      */
-    t:number = T.UINT32;
+    t:T = T.UINT32;
 
     /**
      * Type or arg name
@@ -29,13 +29,13 @@ export class TypedData implements IStringIndex {
      * interpret current data
      * @field {number}
      */
-    r = -1;
+    r? = -1;
 
     /**
      * Meaning of the value (conceptually) : file descriptor, pointer to struct, flags, ...
      * @field {Types.L}
      */
-    l=-1;
+    l?=-1;
 
     /**
      * Optional. If the mean of the data is specified, an extra value to help to parse
@@ -51,7 +51,7 @@ export class TypedData implements IStringIndex {
      * Default is FALSE
      * @field {boolean}
      */
-    c = false;
+    c? = false;
 
     /**
      * Optional. The list of error codes which can be hold by this data.
@@ -122,9 +122,13 @@ export class TypedData implements IStringIndex {
         return this;
     }
 
-    asReturn( pError:any[]=[]){
-        const t:TypedData = new TypedData(this);
+    asReturn( pError:any[]=[]):SyscallOutInfo{
+        const t = new TypedData(this);
         t.e = pError;
-        return t;
+        return t as SyscallOutInfo;
     }
+}
+
+export interface TypedDataMap {
+    [type:string] :TypedData;
 }

@@ -1,11 +1,18 @@
-import {InterruptorAgent, InterruptSignatureMap} from "../common/InterruptorAgent.js";
+import {InterruptorAgent} from "../common/InterruptorAgent.js";
 import {InterruptorGenericException} from "../common/InterruptorException.js";
-import {T, L, F} from "../common/Types.js";
+import {
+    T,
+    L,
+    F,
+    SyscallCallingConvention,
+    SyscallSignature,
+    InterruptSignatureMap,
+    SyscallParamSignature
+} from "../common/Types.js";
 import * as DEF from "../kernelapi/LinuxArm64Flags.js";
 import {TypedData} from "../common/TypedData.js";
 import {SVC} from "../syscalls/LinuxAarch64Syscalls.js";
 import {IStringIndex} from "../utilities/IStringIndex.js";
-import {SyscallHandlersMap, SyscallMap} from "../syscalls/ISyscall.js";
 import {DebugUtils} from "../common/DebugUtils.js";
 
 interface RichContextOptions extends Arm64CpuContext {
@@ -22,7 +29,7 @@ interface ExtraContext {
     [name:string] :any;
 }
 
-interface RichArm64CpuContext extends Arm64CpuContext {
+interface RichArm64CpuContext extends Arm64CpuContext, IStringIndex {
     dxc?:ExtraContext;
     log?:string;
     dxcOpts?:RichContextOptions;
@@ -46,11 +53,11 @@ const E = DEF.E;
 const MAP_ = DEF.MAP_;
 const X = DEF.X;
 
-const SVC_MAP_NUM:SyscallHandlersMap = {};
-const SVC_MAP_NAME:SyscallMap = {};
+const SVC_MAP_NUM:any = {};
+const SVC_MAP_NAME:IStringIndex = {};
 
-SVC.map(x => {
-    SVC_MAP_NAME[x[1] as string] = x;
+SVC.map((x) => {
+    SVC_MAP_NAME[x[1]] = x;
     SVC_MAP_NUM[x[0]] = x;
 });
 
@@ -62,7 +69,30 @@ export const KAPI = {
     ERR: DEF.ERR
 };
 
+
+
+// Syscall calling Convention for aarch32
+const CC:SyscallCallingConvention = {
+    OP: 'svc',
+    NR: 'x8',
+    RET: 'x0',
+    ARG0: 'x0',
+    ARG1: 'x1',
+    ARG2: 'x2',
+    ARG3: 'x3',
+    ARG4: 'x4',
+    ARG5: 'x5',
+    PC: 'pc'
+};
+
+/**
+ * This class is the main part of tracing and parsing part. It provides every parts
+ * very specific to an architecture, an OS, ...
+ *
+ * @class
+ */
 export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStringIndex {
+
 
     loadCtr = 0;
 
@@ -78,18 +108,6 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
         super(pConfig, pDoFollowThread, pInterrupts);
         this.configure(pConfig);
     }
-
-    /*_setupDelegateFilters( pTypes:string, pOpts:any):void {
-        if(pOpts == null) return;
-
-        const o = pOpts;
-        const f = (this as any)[pTypes];
-
-        ["svc","hvc","smc"].map( x => {
-            if(o.hasOwnProperty(x))
-                f[x] = o[x];
-        });
-    }*/
 
     configure(pConfig:any){
         if(pConfig == null) return;
@@ -167,6 +185,12 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
         return l;
     }
 
+    /**
+     * This method setup linker hook to
+     *
+     * @param pModuleRegExp
+     * @param pOptions
+     */
     startOnLoad( pModuleRegExp:RegExp, pOptions:any = null):any {
         let  do_dlopen = null, call_ctor = null, scopedTrace = null, match:string|null=null;
         // eslint-disable-next-line @typescript-eslint/no-this-alias
@@ -325,13 +349,14 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
     }
 
     /**
+     * This method is called
      *
      * @param pContext
      * @param pValue
      * @param pFormat
      * @param pIndex
      */
-    parseValue( pContext:any, pValue:any, pFormat:any, pIndex:number):any {
+    parseValue( pContext:any, pValue:any, pFormat:SyscallParamSignature, pIndex:number):any {
         let p = "", rVal: any = null, data:any=null, t: any = null;
 
 
@@ -388,9 +413,10 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
                     break;
                 case L.VADDR:
                     if (pFormat.f == null) {
-                        p += pContext.dxcOpts[pFormat] = rVal;
-                        break;
+                        p += (pContext.dxcOpts[pFormat.n] = rVal);
+                        //break;
                     }
+                    break;
                 case L.FLAG:
                     if (pFormat.t != T.POINTER64){
                         data = rVal;
@@ -447,7 +473,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
      * @param pFormat
      * @param pIndex
      */
-    parseRawArgs( pContext:any, pFormat:any, pIndex:number):any {
+    parseRawArgs( pContext:any, pFormat:SyscallParamSignature, pIndex:number):any {
 
         if (typeof pFormat === "string") {
             return` ${pFormat} = ${pContext[GPR + pIndex] }`;
@@ -458,18 +484,26 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
 
     /**
      * Method executed before the syscall interruption
-     * if the syscall is not excluded
+     * if the syscall is not excluded.
      *
-     * @param pContext
-     * @param pHookCfg
+     * This method is responsible of argument parsing, and work as described below :
+     *
+     * - 1. read syscall number from a register according to @link{ SyscallCallingConvention }
+     * - 2. find description of corresponding syscall
+     * - 3. save the type of return value from description into hook context
+     * - 4.
+     *
+     * @param {any} pContext CPU context
+     * @param {any} pHookCfg Addition hook configuration
+     * @method
      */
     traceSyscall( pContext:any, pHookCfg:any = null){
 
-        const sys = SVC_MAP_NUM[ pContext.x8.toInt32() ];
-        const inst = "SVC";
+        const sysNR = pContext[CC.NR];
+        const sys:SyscallSignature = SVC_MAP_NUM[ sysNR.toInt32() ];
 
         if(sys==null) {
-            console.log( ' ['+this.locatePC(pContext.pc)+']   \x1b[35;01m' + inst + ' ('+pContext.x8+')\x1b[0m Syscall=<unknow>');
+            console.log( ' ['+this.locatePC(pContext.pc)+']   \x1b[35;01m' + CC.OP + ' ('+sysNR+')\x1b[0m Syscall=<unknow>');
             return;
         }
 
@@ -486,7 +520,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
 
         //console.log(s);
         if(this.output.flavor == InterruptorAgent.FLAVOR_DXC){
-            pContext.log = this.formatLogLine(pContext, s, inst, pContext.x8)
+            pContext.log = this.formatLogLine(pContext, s, CC.OP, sysNR)
         }
 
     }
@@ -540,18 +574,21 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
 
         let err;
         let ret = pContext.dxcRET;
+        const RET = pContext[CC.RET];
+
         if(ret != null){
+
 
             switch (ret.l) {
                 case L.SIZE:
                     if(this.output.dump_buff)
-                        ret = "(len="+pContext.x0+") "; //+pContext["x"+ret.r].readCString();
+                        ret = "(len="+RET+") "; //+pContext["x"+ret.r].readCString();
                     else
-                        ret = pContext.x0;
+                        ret = RET;
                     break;
                 case L.DFD:
                 case L.FD:
-                    if(pContext.x0.toInt32() >= 0){
+                    if(RET.toInt32() >= 0){
                         if(pContext.dxc==null){
                             pContext.dxc = {FD:{}};
                             pContext.dxcFD = pContext.dxc.FD = {};
@@ -559,46 +596,46 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
                         if(pContext.dxc.FD==null){
                             pContext.dxcFD = pContext.dxc.FD = {};
                         }
-                        pContext.dxc.FD[ pContext.x0.toInt32()+""] = pContext.dxcOpts[ret.r];
-                        ret = "("+(L.DFD==ret.l?"D":"")+"FD) "+pContext.x0;
+                        pContext.dxc.FD[ RET.toInt32()+""] = pContext.dxcOpts[ret.r];
+                        ret = "("+(L.DFD==ret.l?"D":"")+"FD) "+RET;
                     }else if(ret.e){
-                        const err = this.getSyscallError(pContext.x0.toInt32(), ret.e);
+                        const err = this.getSyscallError(RET.toInt32(), ret.e);
                         ret = "(ERROR) "+err+" "  ;
                     }else{
-                        ret = "(ERROR) "+pContext.x0;
+                        ret = "(ERROR) "+RET;
                     }
 
                     break;
                 case L.SOCKFD:
                     if(pContext.x0.toInt32() >= 0){
-                        pContext.dxc.SOCKFD[ pContext.x0.toInt32()+""] = pContext.dxcOpts["x1"]+","+pContext.dxcOpts["x2"];
-                        ret = "(SOCKFD) "+pContext.x0;
+                        pContext.dxc.SOCKFD[ RET.toInt32()+""] = pContext.dxcOpts["x1"]+","+pContext.dxcOpts["x2"];
+                        ret = "(SOCKFD) "+RET;
                     }else if(ret.e){
-                        const err = this.getSyscallError(pContext.x0.toInt32(), ret.e);
+                        const err = this.getSyscallError(RET.toInt32(), ret.e);
                         ret = "(ERROR) "+err+" "  ;
                     }else{
-                        ret = "(ERROR) "+pContext.x0;
+                        ret = "(ERROR) "+RET;
                     }
                 case L.WD:
-                    if(pContext.x0.toInt32() >= 0){
-                        pContext.dxc.WD[ pContext.x0.toInt32()+""] = pContext.dxcOpts[ret.r];
-                        ret = "(WD) "+pContext.x0;
+                    if(RET.toInt32() >= 0){
+                        pContext.dxc.WD[ RET.toInt32()+""] = pContext.dxcOpts[ret.r];
+                        ret = "(WD) "+RET;
                     }else if(ret.e){
-                        const err = this.getSyscallError(pContext.x0.toInt32(), ret.e);
+                        const err = this.getSyscallError(RET.toInt32(), ret.e);
                         ret = "(ERROR) "+err+" "  ;
                     }else{
-                        ret = "(ERROR) "+pContext.x0;
+                        ret = "(ERROR) "+RET;
                     }
 
                     break;
                 case L.FCNTL_RET:
-                    ret = X.FCNTL_RET(pContext.x0, pContext.x1);
+                    ret = X.FCNTL_RET(RET, pContext.x1);
                     break;
                 case L.VADDR:
                     if(ret.e != null ){
-                        err = this.getSyscallError(pContext.x0, ret.e);
-                        if(err != pContext.x0){
-                            ret = pContext.x0+' SUCCESS';
+                        err = this.getSyscallError(RET, ret.e);
+                        if(err != RET){
+                            ret = RET+' SUCCESS';
                         }else{
                             ret = err ;
                         }
@@ -606,19 +643,19 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
                     break;
                 default:
                     if(ret.e != null ){
-                        err = this.getSyscallError(pContext.x0.toInt32(), ret.e);
+                        err = this.getSyscallError(RET.toInt32(), ret.e);
                         if(err == 0){
-                            ret = pContext.x0.toUInt32().toString(16)+' SUCCESS';
+                            ret = RET.toUInt32().toString(16)+' SUCCESS';
                         }else{
                             ret = err ;
                         }
                     }
                     else
-                        ret = pContext.x0.toUInt32().toString(16);
+                        ret = RET.toUInt32().toString(16);
                     break;
             }
         }else{
-           ret = pContext.x0;
+           ret = RET;
         }
 
         // main print here
@@ -643,13 +680,21 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
     }
 
 
+    /**
+     * To setup "trace" hook is the current instruction is an interruption or follow immediately one.
+     *
+     * This function is called by Stalker's event listener for each instruction
+     *
+     * @param {StalkerX86Iterator | StalkerArm64Iterator  | StalkerArmIterator| StalkerThumbIterator} pStalkerInterator The stalker iterator
+     * @param {any} pInstruction The current instruction
+     * @param {any} pExtra Some extra options
+     * @method
+     */
     trace( pStalkerInterator: StalkerX86Iterator
         | StalkerArm64Iterator
         | StalkerArmIterator
         | StalkerThumbIterator, pInstruction:any, pExtra:any):number{
 
-
-        const self = this as any;
 
         const keep = 1;
         if(pExtra.onLeave == 1){
@@ -657,7 +702,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
             pStalkerInterator.putCallout((context: PortableCpuContext) =>{
 
                 const richCtx = context as RichArm64CpuContext;
-                const n = richCtx.x8.toInt32();
+                const n = richCtx[CC.NR].toInt32();
 
                 if(richCtx.dxc==null) richCtx.dxc = {FD:{}};
                 if(this.scope.syscalls!=null && this.scope.syscalls.isExcluded!=null && this.scope.syscalls.isExcluded(n)) return;
@@ -691,22 +736,23 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
         }
 
 
-        if (pInstruction.mnemonic === 'svc') {
+        if (pInstruction.mnemonic === CC.OP) {
 
             pExtra.onLeave =  1;
             pStalkerInterator.putCallout((context: PortableCpuContext) =>{
 
                 const richCtx = context as RichArm64CpuContext;
-                const n = richCtx.x8.toInt32();
+                const n = richCtx[CC.NR].toInt32();
+                const PC = richCtx[CC.PC];
 
-                const m = Process.findModuleByAddress(context.pc)
+                const m = Process.findModuleByAddress(PC)
 
                 // debug
                 if(this.debug.syscallLookup){
                     if(m!=null) {
-                        console.log("[DEBUG][SYSCALL][BEFORE FILTER][" + context.pc + " : " + m.name + " " + (context.pc.sub(m.base)) + "] > " + Instruction.parse(context.pc) + " > NUM " + n);
+                        console.log("[DEBUG][SYSCALL][BEFORE FILTER][" + PC + " : " + m.name + " " + (PC.sub(m.base)) + "] > " + Instruction.parse(PC) + " > NUM " + n);
                     }else{
-                        console.log("[DEBUG][SYSCALL][BEFORE FILTER][" + context.pc + " : UNKNOW MODULE " + (context.pc)+" - MODULE_BASE ] > " + Instruction.parse(context.pc) + " > NUM " + n);
+                        console.log("[DEBUG][SYSCALL][BEFORE FILTER][" + PC + " : UNKNOW MODULE " + (PC)+" - MODULE_BASE ] > " + Instruction.parse(PC) + " > NUM " + n);
                     }
                 }
 
@@ -738,6 +784,11 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
         return keep;
     }
 
+    /**
+     * To print some statistic about coverage for linux/arm64
+     *
+     * @method
+     */
     printStats(){
         super.printStats(SVC);
     }

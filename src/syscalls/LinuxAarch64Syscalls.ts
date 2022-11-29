@@ -1,7 +1,6 @@
 import * as DEF from "../kernelapi/LinuxArm64Flags.js";
 import {TypedData} from "../common/TypedData.js";
-import {L, T} from "../common/Types.js";
-import {SyscallSignature} from "./ISyscall.js";
+import {L, SyscallSignature, T} from "../common/Types.js";
 
 const E = DEF.E;
 const X = DEF.X;
@@ -71,7 +70,6 @@ const A = {
     COUNT: _({t:T.UINT32, n:"count", l:L.SIZE}),
     RUID: _({t:T.UINT32, n:"real_user", l:L.UID}),
     EUID: _({t:T.UINT32, n:"effective_user", l:L.UID}),
-
     POLLFD: _({ t:T.INT32, n:"*pollfd", l:L.DSTRUCT, f:"pollfd" }),
     KERNEL_TIMESPEC: _({t:T.POINTER64, n:"*__kernel_timespec", l:L.DSTRUCT, f:"__kernel_timespec"} ),
     CONST_KERNEL_TIMESPEC: _({t:T.POINTER64, n:"*__kernel_timespec", l:L.DSTRUCT, f:"__kernel_timespec", c:true} ),
@@ -161,7 +159,7 @@ export const SVC:SyscallSignature[] = [
     [22,"epoll_pwait",0x16,[A.EPFD,A.EPEV,{t:T.INT32, n:"maxevents"},{t:T.INT32, n:"timeout"},A.SIGSET.copy("*sigmask").constant(true) ]],
     [23,"dup",0x17,[A.FD],{t:T.UINT32, n:"fd", l:L.FD, e:[E.EBADF, E.EBUSY, E.EINTR, E.EINVAL, E.EMFILE]}],
     [24,"dup3",0x18,[{t:T.UINT32, n:"old_fd", l:L.FD},{t:T.UINT32, n:"old_fd", l:L.FD}, {t:T.INT32, n:"flags", l:L.FLAG}],{t:T.UINT32, n:"fd", l:L.FD, e:[E.EBADF, E.EBUSY, E.EINTR, E.EINVAL, E.EMFILE]}],
-    [25,"fcntl",0x19,[A.FD,{t:T.UINT32, n:"cmd", l:L.FLAG, f:X.FNCTL} ,{t:T.ULONG, n:"args", l:L.FLAG, r:"x1", f:X.FCNTL_ARGS}], {t:T.INT32, n:"ret", r:"x1", l:L.FLAG, f:X.FCNTL_RET}],
+    [25,"fcntl",0x19,[A.FD,{t:T.UINT32, n:"cmd", l:L.FLAG, f:X.FNCTL} ,{t:T.ULONG, n:"args", l:L.FLAG, r:"x1", f:X.FCNTL_ARGS}], {t:T.INT32, n:"ret", r:"x1", l:L.FLAG, f:X.FCNTL_RET, e:[]}],
     [26,"inotify_init1",0x1a,[{t:T.INT32, n:"flags", l:L.FLAG, f:X.INOTIFY_FLAGS}],{t:T.INT32, e:[E.EMFILE,E.EINVAL,E.ENFILE,E.ENOMEM]}],
     [27,"inotify_add_watch",0x1b,[A.FD,A.CONST_PATH,{t:T.UINT32, n:"mask", l:L.FLAG, f:X.INOTIFY_MASK}],A.WD.asReturn([E.EACCES,E.EBADF,E.EEXIST,E.EFAULT,E.EINVAL,E.ENAMETOOLONG,E.ENOENT,E.ENOMEM,E.ENOSPC,E.ENOTDIR])],
     [28,"inotify_rm_watch",0x1c,[A.FD,A.WD],{t:T.INT32, e:[E.EBADF,E.EINVAL]}],
@@ -199,7 +197,7 @@ export const SVC:SyscallSignature[] = [
     [60,"quotactl",0x3c,["unsigned int cmd",A.CONST_NAME.copy("special"),"qid_t id","void *addr"]],
     [61,"getdents64",0x3d,[{t:T.UINT32, n:"fd", l:L.FD},{t:T.POINTER64, n:"linux_dirent64 *dirent", l:L.DSTRUCT, f:"linux_dirent64"},A.SIZE]],
     [62,"lseek",0x3e,[A.FD,A.OFFSET,{t:T.UINT32, n:"whence", l:L.FLAG, f:X.SEEK}]],
-    [63,"read",0x3f,[A.FD, A.OUTPUT_CHAR_BUFFER, {t:T.UINT32, n:"count", l:L.SIZE}], {t:T.UINT32, r:1, n:"sz", l:L.SIZE}],
+    [63,"read",0x3f,[A.FD, A.OUTPUT_CHAR_BUFFER, {t:T.UINT32, n:"count", l:L.SIZE}], {t:T.UINT32, r:1, n:"sz", l:L.SIZE, e:[]}],
     [64,"write",0x40,[A.FD,{t:T.CHAR_BUFFER, n:"buf", c:true},A.SIZE]],
     [65,"readv",0x41,[A.FD,A.IOVEC,A.LEN]],
     [66,"writev",0x42,[A.FD,A.IOVEC,A.LEN]],
@@ -232,7 +230,7 @@ export const SVC:SyscallSignature[] = [
     [93,"exit",0x5d,[{ t:T.INT32, n:"status" }]],
     [94,"exit_group",0x5e,[{ t:T.INT32, n:"status" }]],
     [95,"waitid",0x5f,[{ t:T.INT32, n:"type_id", l:L.FLAG, f:X.TYPEID},{t:T.UINT32, n:"id"},A.SIGINFO,"int options",A.RUSAGE ]],
-    [96,"set_tid_address",0x60,[{t:T.POINTER32, n:"*tidptr"}],A.CALLER_TID],
+    [96,"set_tid_address",0x60,[{t:T.POINTER32, n:"*tidptr"}],A.CALLER_TID.asReturn()],
     [97,"unshare",0x61,[{ t:T.INT32, n:"flags", l:L.FLAG, f:X.CLONE}]],
     [98,"futex",0x62,[ {t:T.UINT32, n:"word", l:L.FUTEX},{ t:T.INT32, n:"op", l:L.FLAG, f:X.FUTEX_OPE}, "u32 val",A.KERNEL_TIMESPEC.copy("*utime"),"u32 *uaddr2","u32 val3["]],
     [99,"set_robust_list",0x63,[A.ROBUST_LH,A.LEN]],
@@ -425,7 +423,7 @@ export const SVC:SyscallSignature[] = [
     [286,"preadv2",0x11e,[A.LFD,A.IOVEC,A.LEN,A.LOFFSET,A.RWF]],
     [287,"pwritev2",0x11f,[A.LFD,A.IOVEC,A.LEN,A.LOFFSET,A.RWF]],
     [288,"pkey_mprotect",0x120,[A.ADDR,A.SIZE,A.MPROT,A.PKEY]],
-    [289,"pkey_alloc",0x121,["unsigned long RESERVED flags",{t:T.ULONG, n:"access_rights", l:L.FLAG, f:X.PKEY_ACL }],A.PKEY],
+    [289,"pkey_alloc",0x121,["unsigned long RESERVED flags",{t:T.ULONG, n:"access_rights", l:L.FLAG, f:X.PKEY_ACL }],A.PKEY.asReturn()],
     [290,"pkey_free",0x122,[A.PKEY]],
     [291,"statx",0x123,[A.DFD, A.CONST_PATH,A.ACCESS_FLAGS,"unsigned mask",A.STATX ]]
 ];

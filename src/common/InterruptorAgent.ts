@@ -1,18 +1,12 @@
 import {CoverageAgent} from "../utilities/Coverage.js";
-import {F, L} from "./Types.js";
+import {F, InterruptSignature, InterruptSignatureMap, L, SyscallInfo, SyscallSignature} from "./Types.js";
 import {IStringIndex} from "../utilities/IStringIndex.js";
 import {DebugUtils} from "./DebugUtils.js";
-import {SyscallInfo, SyscallSignature} from "../syscalls/ISyscall.js";
 import {SVC} from "../syscalls/LinuxAarch64Syscalls.js";
 
 let CTR = 0;
 
-export type InterruptSignature = SyscallSignature;
 
-export interface InterruptSignatureMap {
-    syscalls: SyscallSignature[] | null,
-    [type:string] :InterruptSignature[] | null
-}
 
 export interface DebugOptions {
     syscallLookup:boolean;
@@ -54,6 +48,8 @@ export class InterruptorAgent implements IStringIndex {
     static FLAVOR_STRACE= "strace";
 
     uid = 0;
+
+    catchBRKPT:boolean = false;
 
     ranges: any = new Map();
     modules: Module[] = [];
@@ -569,7 +565,6 @@ export class InterruptorAgent implements IStringIndex {
                 while ((instruction = iterator.next()) !== null) {
                     next = 1;
 
-                    //console.log(instruction);
                     next = this.trace( iterator, instruction, threadExtra );
                     //next = self.trace( iterator, instruction, threadExtra );
 
