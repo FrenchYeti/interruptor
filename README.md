@@ -8,6 +8,7 @@ The home for Interruptor, a human-friendly interrupts hook library based on Frid
 
 Interruptor is the interrupts/systemcall hooking system from Dexcalibur.
 
+
 Quick start for Android app (could not work as is with obfuscated app) :
 ```
 frida --codeshare FrenchYeti/android-arm64-strace -U -f YOUR_BINARY
@@ -37,6 +38,8 @@ Interruptor can be used by following different approach. I Hope you will be able
 - C. From source
 
 ### Case A : Using Interruptor package
+
+[See it on NPM](https://www.npmjs.com/package/@reversense/interruptor)
 
 **It is the BEST and more reliable way to use Interruptor** 
 

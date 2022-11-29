@@ -12,7 +12,8 @@ const config = {
         path: outputPath,
         filename: 'android-arm64-strace.min.js',
         library:{
-            type: 'module'
+            //type: 'module'
+            type: 'commonjs'
         }
     },
     experiments: {

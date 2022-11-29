@@ -1,6 +1,6 @@
 {
   "name": "@reversense/interruptor",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "A Frida-based library for hook system call (and interrupts) and produce strace-like output ",
   "main": "index.js",
   "type": "module",
@@ -13,7 +13,10 @@
   "scripts": {
     "build": "npx tsc",
     "test": "mocha -r ts-node/register ./test/**/*.ts",
-    "clean": "rm src/**/*.js src/**/*.d.ts"
+    "clean": "rm src/**/*.js src/**/*.d.ts",
+    "pack-x64": "npx webpack --config webpack.android.x64.config.js",
+    "pack-arm64": "npx webpack --config webpack.android.arm64.config.js",
+    "pack-aarch32": "npx webpack --config webpack.android.aarch32.config.js"
   },
   "repository": {
     "type": "git",
