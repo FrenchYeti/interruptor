@@ -8,8 +8,9 @@ import {T, L} from  "../common/Types.js";
 import {X} from "../kernelapi/LinuxArm64Flags.js";
 import {InterruptorAgent} from "../common/InterruptorAgent.js";
 import {AbstractInterruptorFactory} from "../common/AbstractInterruptorFactory.js";
-import {LinuxArm64InterruptorAgent, KAPI} from "./LinuxArm64InterruptorAgent.js";
+import {LinuxArm64InterruptorAgent, KAPI, LinuxAarch64InterruptorAgentConfig} from "./LinuxArm64InterruptorAgent.js";
 import {SVC} from "../syscalls/LinuxAarch64Syscalls.js";
+import {KernelAPI} from "../kernelapi/Types";
 
 
 
@@ -38,9 +39,11 @@ function deepCopy(pSrcObject:any): any {
     return destObj;
 }
 
+
 export class LinuxArm64InterruptorFactory extends AbstractInterruptorFactory {
 
-    KAPI:any = KAPI;
+    KAPI:KernelAPI = KAPI;
+
     T:any = T;
     L:any = L;
     X:any = X;
@@ -123,7 +126,7 @@ export class LinuxArm64InterruptorFactory extends AbstractInterruptorFactory {
      * To create a new Frida agent
      * @param pConfig
      */
-    newAgentTracer(pConfig: any):InterruptorAgent {
+    newAgentTracer(pConfig: LinuxAarch64InterruptorAgentConfig):InterruptorAgent {
 
         const agent = new LinuxArm64InterruptorAgent(pConfig, LinuxArm64InterruptorFactory._followThread, {
             syscalls: SVC

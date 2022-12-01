@@ -1,6 +1,65 @@
 import {InterruptorAgent} from "../common/InterruptorAgent.js";
 
+/**
+ * Only drcov is supported
+ * Define the type of coverage to produce
+ * @typedef
+ */
+type CoverageFlavor = "dr" ;
 
+/**
+ * Help to define one or more stop conditions for coverage.
+ * Stop condition is particularly useful when the application crash
+ * @interface
+ */
+interface StopCondition {
+    /**
+     * The number of basic block to trace before to stop coverage.
+     * The value can be **Infinity** to remove the limit
+     * @type {number}
+     * @field
+     */
+    count: number
+}
+
+/**
+ * Options to initialize and configure the coverage generator
+ * @interface
+ */
+export interface CoverageOptions {
+    /**
+     * The filename/path for output file
+     * @type string
+     * @field
+     */
+    fname?:string;
+    /**
+     * A simple switch to turn coverage on/off.
+     * This value has not effect if the value is changed at runtime
+     * @field
+     */
+    enabled?:boolean;
+    /**
+     * The format
+     * @field
+     */
+    flavor?:CoverageFlavor;
+    /**
+     * The conditions to fulfill to stop coverage
+     * @field
+     */
+    stops?:StopCondition;
+    /**
+     * A hook
+     * @field
+     */
+    onCoverage?: (()=>any);
+}
+
+/**
+ * An event produced by the Stalker
+ * @interface
+ */
 export interface CoverageEvent {
     offset: number;
     length: number;
@@ -8,6 +67,12 @@ export interface CoverageEvent {
     [key: string]:any;
 }
 
+
+/**
+ * The aim of this class is to comsume CoverageEvent produced by the produce
+ * Stalker and generate coverage file for IDA LightHouse, Ghidra DragonDance, ...
+ * @class
+ */
 export class CoverageAgent {
 
 
@@ -101,7 +166,7 @@ export class CoverageAgent {
         this.interruptor = pInterruptor;
     }
 
-    static from( pConfig:any, pInterruptor:any):CoverageAgent {
+    static from( pConfig:CoverageOptions, pInterruptor:any):CoverageAgent {
         const agent = new CoverageAgent(pInterruptor);
         for(const i in pConfig){
             switch(i){

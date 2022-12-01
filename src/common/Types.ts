@@ -94,6 +94,29 @@ export type SyscallName = string;
 export type ErrorCodeName = string;
 export type ErrorCodeConst = number;
 
+
+
+
+/**
+ * To hold extra data for the hook context
+ * @interface
+ */
+interface ExtraContext {
+    orig?:NativePointer;
+    FD?:any;
+    WD?:any;
+    SOCKFD?:any;
+    DFD?:any;
+    [name:string] :any;
+}
+
+export interface RichCpuContext {
+    dxc?:ExtraContext;
+    log?:string;
+    dxcOpts?:any;
+    dxcRet?:any;
+}
+
 /**
  * Basic interface to define an error code
  * @interface
@@ -106,6 +129,10 @@ export interface ErrorCode {
 
 export interface ErrorCodeList extends IStringIndex {
     [name:string] :ErrorCode;
+}
+
+export interface ErrorCodeMapping extends IStringIndex {
+    [name:string] :number;
 }
 
 export interface SyscallInOutInfo extends IStringIndex{
@@ -134,6 +161,16 @@ export interface SyscallOutMap extends IStringIndex {
 
 export type SyscallParamSignature = SyscallInInfo | string;
 
+export interface SyscallHook {
+    onEnter?: ((ctx:RichCpuContext)=>void);
+    onLeave?: ((ctx:RichCpuContext)=>void);
+}
+
+export interface SyscallHookMap {
+    [syscallName:string] : SyscallHook;
+}
+
+
 export enum SyscallInfo {
     NUM,
     NAME,
@@ -150,6 +187,9 @@ export interface SyscallSignature {
     4?: SyscallOutInfo;
 }
 
+export interface SyscallMapping {
+    [name:string] :SyscallSignature;
+}
 
 export type InterruptSignature = SyscallSignature;
 
@@ -207,7 +247,9 @@ export enum L {
     IDSTRUCT,
     FUTEX,
     TIMER,
-    MQDES// struct always parsed,
+    MQDES,// struct always parsed,
+    PTRACE
+
 }
 
 /**

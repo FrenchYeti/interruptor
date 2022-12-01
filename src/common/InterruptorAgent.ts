@@ -1,5 +1,11 @@
 import {CoverageAgent} from "../utilities/Coverage.js";
-import {F, InterruptSignature, InterruptSignatureMap, L, SyscallInfo, SyscallSignature} from "./Types.js";
+import {
+    F,
+    InterruptSignatureMap,
+    L,
+    SyscallHookMap,
+    SyscallInfo
+} from "./Types.js";
 import {IStringIndex} from "../utilities/IStringIndex.js";
 import {DebugUtils} from "./DebugUtils.js";
 import {SVC} from "../syscalls/LinuxAarch64Syscalls.js";
@@ -7,11 +13,10 @@ import {SVC} from "../syscalls/LinuxAarch64Syscalls.js";
 let CTR = 0;
 
 
-
 export interface DebugOptions {
-    syscallLookup:boolean;
-    scope:boolean;
-    stalker:boolean;
+    syscallLookup?:boolean;
+    scope?:boolean;
+    stalker?:boolean;
 }
 
 export interface NumericRange {
@@ -26,15 +31,76 @@ export interface Scope {
     _policy?:F;
     exclude?:ScopeFilter[];
     include?:ScopeFilter[];
-    isExcluded:((num:number)=>boolean)
+    isExcluded?:((num:number)=>boolean)
 }
 
 
 export interface ScopeMap {
-    modules:Scope|null;
-    syscalls:Scope|null;
-    ranges:Scope|null;
+    modules?:Scope|null;
+    syscalls?:Scope|null;
+    ranges?:Scope|null;
     [customScope:string] :Scope|null;
+}
+
+interface InterruptorContext extends IStringIndex{
+    agent: InterruptorAgent;
+    tid: number;
+    [name:string]: any;
+}
+
+/**
+ * Interruptor lifecycle hooks
+ * @interface
+ */
+interface InterruptorHooks {
+    beforeStart?: ((ev:InterruptorContext)=>void),
+    afterStart?: ((ev:InterruptorContext)=>void)
+}
+
+interface OuputHighlightOpts {
+    syscalls?: any
+}
+/**
+ * Configuration of the output printer
+ * @interface
+ */
+interface OutputOpts {
+    /**
+     * Color associate to the current thread
+     * @type number
+     * @field
+     */
+    _tcolor: number;
+    /**
+     * The flavor define the template to use to print a log : dxc is the default flavor,
+     * else "strace" ll produce same result than "strace"
+     * @type {"dxc" | "strace"}
+     * @field
+     */
+    flavor: "dxc" | "strace";
+    tid: boolean;
+    pid: boolean;
+    module: boolean;
+    dump_buff: boolean;
+    hide: any;
+    indent: string;
+    highlight: OuputHighlightOpts;
+    [name:string]:any;
+}
+
+export interface InterruptorAgentConfig {
+    followThread?:boolean;
+    followFork?:boolean;
+    scope?: ScopeMap;
+    onStart?: ((arg:any)=>void);
+    svc?: SyscallHookMap;
+    coverage?:any;
+    hook?:InterruptorHooks;
+    types?:any;
+    debug?:DebugOptions;
+    pid?:number;
+    tid?:number;
+    emulator?:boolean;
 }
 
 
@@ -48,8 +114,6 @@ export class InterruptorAgent implements IStringIndex {
     static FLAVOR_STRACE= "strace";
 
     uid = 0;
-
-    catchBRKPT:boolean = false;
 
     ranges: any = new Map();
     modules: Module[] = [];
@@ -73,11 +137,9 @@ export class InterruptorAgent implements IStringIndex {
 
     coverage?:CoverageAgent;
 
-    exclude: any = null;
+    // exclude: any = null;
 
-    include: any = null;
-
-    moduleFilter: any = null;
+    // include: any = null;
 
     interrupts: InterruptSignatureMap;
 
@@ -101,13 +163,12 @@ export class InterruptorAgent implements IStringIndex {
      */
     onStart:any = ()=>{ /* empty */ };
 
-    hook:any = {
+    hook:InterruptorHooks = {
         beforeStart: null,
         afterStart: null
     };
 
-
-    output:any = {
+    output:OutputOpts = {
         _tcolor: 0,
         flavor: "dxc",
         tid: true,
@@ -128,7 +189,7 @@ export class InterruptorAgent implements IStringIndex {
      * @param {any} pConfig Options
      * @constructor
      */
-    constructor( pOptions:any, pDoFollowThread:any = null, pInterrupts:InterruptSignatureMap = null) {
+    constructor( pOptions:InterruptorAgentConfig, pDoFollowThread:any = null, pInterrupts:InterruptSignatureMap = null) {
         this.uid = CTR++;
         this.emulator = false;
         this._do_ft = pDoFollowThread;
@@ -182,9 +243,6 @@ export class InterruptorAgent implements IStringIndex {
                     break;
                 case 'output':
                     for(const i in pConfig.output) this.output[i] = pConfig.output[i];
-                    break;
-                case 'moduleFilter':
-                    this.moduleFilter = pConfig.moduleFilter;
                     break;
                 case 'hook':
                     this.hook = pConfig.hook;

@@ -1,29 +1,30 @@
-import {InterruptorAgent} from "../common/InterruptorAgent.js";
+import {InterruptorAgent, InterruptorAgentConfig} from "../common/InterruptorAgent.js";
 import {InterruptorGenericException} from "../common/InterruptorException.js";
-import {T, L, F, SyscallCallingConvention, SyscallInfo, SyscallInInfo, SyscallParamSignature} from "../common/Types.js";
+import {
+    T,
+    L,
+    SyscallCallingConvention,
+    SyscallInfo,
+    SyscallParamSignature,
+    RichCpuContext, SyscallMapping
+} from "../common/Types.js";
 import * as DEF from "../kernelapi/LinuxArm64Flags.js";
 import {TypedData} from "../common/TypedData.js";
 import {SWI} from "../syscalls/LinuxAarch32Syscalls.js";
 import {IStringIndex} from "../utilities/IStringIndex";
+import {KernelAPI, KernelEnum} from "../kernelapi/Types";
 
-// GPR = Global Purpose Register prefix => x/r
-const GPR = "e";
-const SYSC_NUM = 0;
-const SYSC_NAME = 1;
-const SYSC_ARG = 3;
-const SYSC_RET = 4;
-const SVC_ERR = 5;
 
 //{AT_, E, MAP_, X}
-const AT_ = DEF.AT_;
-const MAP_ = DEF.MAP_;
+const AT_ = DEF.CONSTANTS.AT_ as KernelEnum;
+const MAP_ = DEF.CONSTANTS.MAP_ as KernelEnum;
 const X = DEF.X;
 
 // Syscall calling Convention for aarch32
 const CC:SyscallCallingConvention = {
     OP: 'swi',
     NR: 'r7',
-    RET: 'r7',
+    RET: 'r0',
     ARG0: 'r0',
     ARG1: 'r1',
     ARG2: 'r2',
@@ -34,43 +35,41 @@ const CC:SyscallCallingConvention = {
 };
 
 
-
-interface RichContextOptions extends Arm64CpuContext {
+interface RichContextOptions extends ArmCpuContext {
     _extra?:any;
     [name:string] :any;
 }
 
-interface ExtraContext {
-    orig?:NativePointer;
-    FD?:any;
-    WD?:any;
-    SOCKFD?:any;
-    DFD?:any;
-    [name:string] :any;
-}
-
-interface RichArmCpuContext extends ArmCpuContext, IStringIndex {
-    dxc?:ExtraContext;
-    log?:string;
-    dxcOpts?:RichContextOptions;
-    dxcRet?:any;
+interface RichArmCpuContext extends RichCpuContext, ArmCpuContext, IStringIndex {
+    dxcOpts?:RichArmCpuContext;
 }
 
 
 const SYSC_MAP_NUM:any = {};
-const SYSC_MAP_NAME:IStringIndex = {};
+const SYSC_MAP_NAME:SyscallMapping = {};
 
 SWI.map(x => {
     SYSC_MAP_NAME[x[1]] = x;
     SYSC_MAP_NUM[x[0]] = x;
 });
 
-export const KAPI = {
-    CONST: DEF,
-    SVC: SYSC_MAP_NAME,
-    SVC_ARG: SYSC_ARG,
+export const KAPI:KernelAPI = {
+    CONST: DEF.CONSTANTS,
+    SYSC: SYSC_MAP_NAME,
     ERR: DEF.ERR
 };
+
+
+export interface LinuxAarch32InterruptorAgentConfig extends InterruptorAgentConfig {
+    catchWFI?:boolean;
+    catchBRK?:boolean;
+    catchOP?:string[];
+    svc?:any;
+    hvc?:any;
+    filter_name?:any;
+    filter_num?:any;
+}
+
 
 export class LinuxAarch32InterruptorAgent extends InterruptorAgent implements IStringIndex{
 
@@ -88,7 +87,7 @@ export class LinuxAarch32InterruptorAgent extends InterruptorAgent implements IS
     filter_num: string[] = [];
     svc_hk: any = {};
 
-    constructor(pConfig:any, pDoFollowThread:any) {
+    constructor(pConfig:LinuxAarch32InterruptorAgentConfig, pDoFollowThread:any) {
         super(pConfig, pDoFollowThread);
         this.configure(pConfig);
     }
@@ -121,6 +120,9 @@ export class LinuxAarch32InterruptorAgent extends InterruptorAgent implements IS
 
         for(let k in pConfig){
             switch (k){
+                case 'catchOP':
+                    this.catchOP = pConfig.catchOP;
+                    break;
                 case 'svc':
                     for(let s in pConfig.svc) this.onSupervisorCall(s, pConfig.svc[s]);
                     break;
@@ -232,7 +234,7 @@ export class LinuxAarch32InterruptorAgent extends InterruptorAgent implements IS
 
     startOnLoad( pModuleRegExp:RegExp, pOptions:any = null):any {
         let self=this;
-        let do_dlopen:NativePointer = null, call_ctor:NativePointer = null, scopedTrace:NativePointer = null;
+        let do_dlopen:NativePointer = null, call_ctor:NativePointer = null, scopedTrace:NativePointer[] = [];
         let extra:any = null;
         let match:string=null;
         //let opts = pOptions;
@@ -242,16 +244,19 @@ export class LinuxAarch32InterruptorAgent extends InterruptorAgent implements IS
             } else if (sym.name.indexOf('call_constructor') >= 0) {
                 call_ctor = sym.address;
             } else if(sym.name.indexOf('__dl__ZN11ScopedTrace3EndEv') >= 0){
-                scopedTrace = sym.address;
+                scopedTrace.push(sym.address);
+            } else if(sym.name.indexOf('__dl__ZL24debuggerd_signal_handleriP7siginfo')>=0){
+                scopedTrace.push(sym.address);
             }
         });
 
-        if(this.emulator && scopedTrace!=null){
-            const ScopedTraceEnd = new NativeCallback(():number=>{
-                return 1;
-            }, 'int', ['int']);
-
-            Interceptor.replace(scopedTrace, ScopedTraceEnd);
+        if(this.emulator && scopedTrace.length>0){
+            do {
+                const ptr = scopedTrace.pop();
+                Interceptor.replace(ptr,  new NativeCallback(():number=>{
+                    return 1;
+                }, 'int', ['int']));
+            }while (scopedTrace.length > 0);
         }
 
         if(extra != null){
@@ -518,7 +523,7 @@ export class LinuxAarch32InterruptorAgent extends InterruptorAgent implements IS
             return;
         }
 
-        pContext.dxcRET = sysSignature[SYSC_RET];
+        pContext.dxcRET = sysSignature[SyscallInfo.RET];
 
         let s:string = "", p:string= "";
         pContext.dxcOpts = [];
@@ -530,6 +535,7 @@ export class LinuxAarch32InterruptorAgent extends InterruptorAgent implements IS
         if(this.output.flavor == InterruptorAgent.FLAVOR_DXC){
             pContext.log = this.formatLogLine(pContext, s, CC.OP, sysNR)
         }
+
 
     }
 
@@ -685,7 +691,7 @@ export class LinuxAarch32InterruptorAgent extends InterruptorAgent implements IS
         const self = this;
 
         let keep = 1;
-        if(pExtra.onLeave == 1){
+        if(pExtra.onLeave == 2){
 
             pStalkerInterator.putCallout(function(context:PortableCpuContext) {
 
@@ -731,6 +737,7 @@ export class LinuxAarch32InterruptorAgent extends InterruptorAgent implements IS
 
 
         if (pInstruction.mnemonic === CC.OP) {
+            console.log("SWI>");
 
             pExtra.onLeave =  1;
             pStalkerInterator.putCallout(function(context) {

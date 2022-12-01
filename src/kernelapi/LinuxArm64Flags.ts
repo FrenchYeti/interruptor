@@ -1,49 +1,50 @@
 import {IStringIndex} from "../utilities/IStringIndex.js";
-import {ErrorCodeList} from "../common/Types";
+import {ErrorCodeList, ErrorCodeMapping} from "../common/Types";
+import {KernelEnum, KernelConstMapping} from "./Types";
 
 
-export const K = {
+export const K:KernelEnum = {
     P_ALL: [0],
     P_PID: [1],
     P_PGID: [2],
     P_PIDFD: [3]
 };
-export const FMODE = {
+export const FMODE:KernelEnum = {
     F_OK: [0],
     X_OK: [1],
     W_OK: [2],
     R_OK: [4]
 };
 
-export const O_ = {
-    O_ACCMODE: 0o00000003,
-    O_RDONLY: 0o0000000,
-    O_WRONLY: 0o0000001,
-    O_RDWR	: 0o0000002,
-    O_CREAT	: 0o0000100,
-    O_EXCL	: 0o0000200,
-    O_NOCTTY: 0o0000400,
-    O_TRUNC	: 0o0001000,
-    O_APPEND: 0o0002000,
-    O_NONBLOCK: 0o0004000,
-    O_DSYNC	: 0o0010000,
-    O_ASYNC	: 0o0020000,
-    O_DIRECT: 0o0040000,
-    O_LARGEFILE: 0o0100000,
-    O_DIRECTORY: 0o0200000,
-    O_NOFOLLOW: 0o0400000,
-    O_NOATIME: 0o1000000,
-    O_CLOEXEC: 0o2000000,
-    O_PATH:    0o10000000,
-    O_TMPFILE: 0o20040000
+export const O_:KernelEnum = {
+    O_ACCMODE: [0o00000003],
+    O_RDONLY: [0o0000000],
+    O_WRONLY: [0o0000001],
+    O_RDWR	: [0o0000002],
+    O_CREAT	: [0o0000100],
+    O_EXCL	: [0o0000200],
+    O_NOCTTY: [0o0000400],
+    O_TRUNC	: [0o0001000],
+    O_APPEND: [0o0002000],
+    O_NONBLOCK: [0o0004000],
+    O_DSYNC	: [0o0010000],
+    O_ASYNC	: [0o0020000],
+    O_DIRECT: [0o0040000],
+    O_LARGEFILE: [0o0100000],
+    O_DIRECTORY: [0o0200000],
+    O_NOFOLLOW: [0o0400000],
+    O_NOATIME: [0o1000000],
+    O_CLOEXEC: [0o2000000],
+    O_PATH:    [0o10000000],
+    O_TMPFILE: [0o20040000]
 };
 
-export const INOTIFY_FLAGS= {
-    IN_NONBLOCK: [O_.O_NONBLOCK],
-    IN_CLOEXEC: [O_.O_CLOEXEC]
+export const INOTIFY_FLAGS:KernelEnum= {
+    IN_NONBLOCK: [O_.O_NONBLOCK[0]],
+    IN_CLOEXEC: [O_.O_CLOEXEC[0]]
 };
 
-export const INOTIFY_MASK = {
+export const INOTIFY_MASK:KernelEnum = {
 	IN_ACCESS: [0x00000001],
 	IN_MODIFY: [0x00000002],
 	IN_ATTRIB: [0x00000004],
@@ -71,7 +72,7 @@ export const INOTIFY_MASK = {
 	IN_ONESHOT: [0x80000000]
 };
 
-export const RES = {
+export const RES:KernelEnum = {
     RLIMIT_CPU: [0],
     RLIMIT_FSIZE: [1],
     RLIMIT_DATA: [2],
@@ -92,13 +93,13 @@ export const RES = {
     RLIM_INFINITY: [(~0) & 0xffffffffffffffff]
 };
 
-export const EPOLL_CTL = {
+export const EPOLL_CTL:KernelEnum = {
     EPOLL_CTL_ADD: [1],
     EPOLL_CTL_DEL: [2],
     EPOLL_CTL_MOD: [3],
 };
 
-export const EPOLL_EV = {
+export const EPOLL_EV:KernelEnum = {
     //EPOLL_CLOEXEC: [O_.O_CLOEXEC],
     EPOLLIN: [0x00000001],
     EPOLLPRI: [0x00000002],
@@ -117,18 +118,18 @@ export const EPOLL_EV = {
     EPOLLONESHOT: [1 << 30],
     EPOLLET: [1 << 31],
 }
-export const SPLICE = {
+export const SPLICE:KernelEnum = {
     SPLICE_F_MOVE: [1],
     SPLICE_F_NONBLOCK: [2],
     SPLICE_F_MORE: [4],
     SPLICE_F_GIFT: [8]
 };
-export const SYNC_FILE = {
+export const SYNC_FILE:KernelEnum = {
     SYNC_FILE_RANGE_WAIT_BEFORE: [1],
     SYNC_FILE_RANGE_WRITE: [2],
     SYNC_FILE_RANGE_WAIT_AFTER: [4]
 };
-export const AF_ = {
+export const AF_:KernelEnum = {
     AF_UNSPEC: [0],
     AF_UNIX: [1],
     AF_LOCAL: [1],
@@ -174,7 +175,7 @@ export const AF_ = {
     AF_QIPCRTR: [42],
     AF_MAX: [43]
 };
-export const SOCK_ = {
+export const SOCK_:KernelEnum = {
     SOCK_STREAM: [1],
     SOCK_DGRAM: [2],
     SOCK_RAW: [3],
@@ -182,10 +183,10 @@ export const SOCK_ = {
     SOCK_SEQPACKET: [5],
     SOCK_DCCP: [6],
     SOCK_PACKET: [10],
-    SOCK_CLOEXEC: [O_.O_CLOEXEC],
-    SOCK_NONBLOCK: [O_.O_NONBLOCK]
+    SOCK_CLOEXEC: [O_.O_CLOEXEC[0]],
+    SOCK_NONBLOCK: [O_.O_NONBLOCK[0]]
 };
-export const PF_ = {
+export const PF_:KernelEnum = {
     PF_UNSPEC: [AF_.AF_UNSPEC[0]],
     PF_UNIX: [AF_.AF_UNIX[0]],
     PF_LOCAL: [AF_.AF_LOCAL[0]],
@@ -231,7 +232,7 @@ export const PF_ = {
     PF_QIPCRTR: [AF_.AF_QIPCRTR[0]],
     PF_MAX: [AF_.AF_MAX[0]]
 };
-export const PTRACE_ = {
+export const PTRACE_:KernelEnum = {
     PTRACE_TRACEME: [0],
     PTRACE_PEEKTEXT: [1],
     PTRACE_PEEKDATA: [2],
@@ -257,7 +258,7 @@ export const PTRACE_ = {
     PTRACE_PEEKSIGINFO: [0x4209]
 };
 
-export const MADV_ = {
+export const MADV_:KernelEnum = {
     MADV_NORMAL: [0],
     MADV_RANDOM: [1],
     MADV_SEQUENTIAL: [2],
@@ -280,10 +281,10 @@ export const MADV_ = {
     MADV_COLD: [20],
     MADV_PAGEOUT: [21]
 };
-export const MLOCK = {
+export const MLOCK:KernelEnum = {
     MLOCK_ONFAULT: [1]
 };
-export const PR_ = {
+export const PR_:KernelConstMapping = {
     OPT: {
         PR_CAP_AMBIENT: [47],
         PR_CAPBSET_READ: [23],
@@ -337,8 +338,8 @@ export const PR_ = {
         PR_SET_SPECULATION_CTRL: [53],
     },
     DUMPABLE: {
-        SUID_DUMP_DISABLE: 0,
-        SUID_DUMP_USER: 1
+        SUID_DUMP_DISABLE: [0],
+        SUID_DUMP_USER: [1]
     },
     CAP: {
         PR_CAP_AMBIENT_IS_SET: [1],
@@ -471,7 +472,7 @@ S_ISCHR(m) (((m) & S_IFMT) == S_IFCHR)
 S_ISBLK(m) (((m) & S_IFMT) == S_IFBLK)
 S_ISFIFO(m) (((m) & S_IFMT) == S_IFIFO)
 S_ISSOCK(m) (((m) & S_IFMT) == S_IFSOCK)*/
-export const S_ = {
+export const S_:KernelEnum = {
     S_IFMT: [0o0170000],
     S_IFSOCK: [0o140000],
     S_IFLNK: [0o120000],
@@ -498,17 +499,17 @@ export const S_ = {
 };
 
 
-export const MS_ = {
-    MS_ASYNC: 1,
-    MS_INVALIDATE: 2,
-    MS_SYNC: 4
+export const MS_:KernelEnum = {
+    MS_ASYNC: [1],
+    MS_INVALIDATE: [2],
+    MS_SYNC: [4]
 };
-export const MCL_ = {
-    MCL_CURRENT: 1,
-    MCL_FUTURE: 2,
-    MCL_ONFAULT: 4
+export const MCL_:KernelEnum = {
+    MCL_CURRENT: [1],
+    MCL_FUTURE: [2],
+    MCL_ONFAULT: [4]
 };
-export const MAP_ = {
+export const MAP_:KernelEnum = {
     MAP_SHARED: [0x01],
     MAP_PRIVATE: [0x02],
     MAP_SHARED_VALIDATE: [0x03],
@@ -520,7 +521,7 @@ export const MAP_ = {
     MAP_LOCKED: [0x2000],
     MAP_NORESERVE: [0x4000],
 };
-export const CLOCK = {
+export const CLOCK:KernelEnum = {
     CLOCK_REALTIME: [0],
     CLOCK_MONOTONIC: [1],
     CLOCK_PROCESS_CPUTIME_ID: [2],
@@ -535,34 +536,34 @@ export const CLOCK = {
     CLOCK_TAI              : [11]
 } ;
 
-export const MNT_ = {
-    MNT_FORCE: 1,
-    MNT_DETACH: 2,
-    MNT_EXPIRE: 4,
-    UMOUNT_NOFOLLOW: 8,
+export const MNT_:KernelEnum = {
+    MNT_FORCE: [1],
+    MNT_DETACH: [2],
+    MNT_EXPIRE: [4],
+    UMOUNT_NOFOLLOW: [8]
 };
 const PROT_NONE = 0;
-export const PROT_ = {
-    PROT_READ: 1,
-    PROT_WRITE: 2,
-    PROT_EXEC: 4,
-    PROT_SEM: 8, // arch sensitive
+export const PROT_:KernelEnum = {
+    PROT_READ: [1],
+    PROT_WRITE: [2],
+    PROT_EXEC: [4],
+    PROT_SEM: [8], // arch sensitive
     // PROT_SAO: 0x10,  // not implemented on ARM ?
-    PROT_GROWSDOWN: 0x01000000,
-    PROT_GROWSUP: 0x02000000
+    PROT_GROWSDOWN: [0x01000000],
+    PROT_GROWSUP: [0x02000000]
 };
-export const ITIMER = {
+export const ITIMER:KernelEnum = {
     ITIMER_REAL:    [0],
     ITIMER_VIRTUAL: [1],
     TIMER_PROF:    [2]
 }
-export const MFD = {
-    MFD_CLOEXEC: 1,
-    MFD_ALLOW_SEALING: 2,
-    MFD_HUGETLB: 4,
+export const MFD:KernelEnum = {
+    MFD_CLOEXEC: [1],
+    MFD_ALLOW_SEALING: [2],
+    MFD_HUGETLB: [4]
 };
-export const AT_ = {
-    AT_FDCWD: -100,
+export const AT_:KernelEnum = {
+    AT_FDCWD: [-100],
     AT_SYMLINK_NOFOLLOW: [0x100],
     AT_EACCESS: [0x200],
     AT_REMOVEDIR: [0x200],
@@ -575,7 +576,7 @@ export const AT_ = {
     AT_STATX_DONT_SYNC: [0x4000],
     AT_RECURSIVE: [0x8000],
 }
-export const PERSO = {
+export const PERSO:KernelEnum = {
     UNAME26: [0x0020000],
     ADDR_NO_RANDOMIZE: [0x0040000],
     FDPIC_FUNCPTRS: [0x0080000],
@@ -588,7 +589,7 @@ export const PERSO = {
     STICKY_TIMEOUTS: [0x4000000],
     ADDR_LIMIT_3GB: [0x8000000]
 };
-const F_ = {
+export const F_:KernelEnum = {
     F_DUPFD: [0],
     F_GETFD: [1],
     F_SETFD: [2],
@@ -606,7 +607,7 @@ const F_ = {
     F_GETOWNER_UIDS: [17]
 }
 
-export const FUTEX:any = {
+export const FUTEX:KernelEnum = {
     FUTEX_WAIT: [0],
     FUTEX_WAKE: [1],
     FUTEX_FD: [2],
@@ -639,13 +640,13 @@ FUTEX.FUTEX_WAIT_BITSET_PRIVATE = [(FUTEX.FUTEX_WAIT_BITSET[0] | FUTEX.FUTEX_PRI
 FUTEX.FUTEX_WAKE_BITSET_PRIVATE = [(FUTEX.FUTEX_WAKE_BITSET[0] | FUTEX.FUTEX_PRIVATE_FLAG[0] )];
 FUTEX.FUTEX_WAIT_REQUEUE_PI_PRIVATE = [(FUTEX.FUTEX_WAIT_REQUEUE_PI[0] | FUTEX.FUTEX_PRIVATE_FLAG[0] )];
 FUTEX.FUTEX_CMP_REQUEUE_PI_PRIVATE = [(FUTEX.FUTEX_CMP_REQUEUE_PI[0] | FUTEX.FUTEX_PRIVATE_FLAG[0] )];
-export const SIG_FLAG = {
+export const SIG_FLAG:KernelEnum = {
     SIG_BLOCK:     [0],
     SIG_UNBLOCK:   [1],
     SIG_SETMASK:   [2]
 }
 // signals : https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/include/uapi/asm-generic/signal.h
-export const S = {
+export const S:KernelEnum = {
     SIGHUP: [1],
     SIGINT: [2],
     SIGQUIT: [3],
@@ -687,7 +688,7 @@ export const S = {
     SIGSTKSZ: [8192],
 };
 
-export const MOUNT = {
+export const MOUNT:KernelEnum = {
 	MS_RDONLY: [1], /* Mount read-only */
 	MS_NOSUID: [2], /* Ignore suid and sgid bits */
 	MS_NODEV: [4], /* Disallow access to device special files */
@@ -715,10 +716,10 @@ export const MOUNT = {
 	MS_STRICTATIME: [(1<<24)], /* Always perform atime updates */
 	MS_LAZYTIME: [(1<<25)] /* Update the on-disk [acm]times lazily */
 }
-export const MEMBARRIER_FLAG = {
+export const MEMBARRIER_FLAG:KernelEnum = {
     MEMBARRIER_CMD_FLAG_CPU: [(1 << 0)]
 }
-export const MEMBARRIER_CMD = {
+export const MEMBARRIER_CMD:KernelEnum = {
     MEMBARRIER_CMD_QUERY: [0],
     MEMBARRIER_CMD_GLOBAL: [(1 << 0)],
     MEMBARRIER_CMD_GLOBAL_EXPEDITED: [(1 << 1)],
@@ -731,14 +732,14 @@ export const MEMBARRIER_CMD = {
     MEMBARRIER_CMD_REGISTER_PRIVATE_EXPEDITED_RSEQ: [(1 << 8)],
     MEMBARRIER_CMD_SHARED: [(1 << 0)] // MEMBARRIER_CMD_GLOBAL
 }
-export const IOPRIO_WHO =  {
+export const IOPRIO_WHO:KernelEnum =  {
     NULL: [0],
     IOPRIO_WHO_PROCESS: [1],
     IOPRIO_WHO_PGRP: [2],
     IOPRIO_WHO_USER: [3],
 };
 
-export const IOPRIO_CLASS =  {
+export const IOPRIO_CLASS:KernelEnum =  {
     IOPRIO_CLASS_NONE: [0],
     IOPRIO_CLASS_RT: [1],
     IOPRIO_CLASS_BE: [2],
@@ -746,7 +747,7 @@ export const IOPRIO_CLASS =  {
 };
 
 
-export const SEEK_ = {
+export const SEEK_:KernelEnum = {
     SEEK_SET: [0],
     SEEK_CUR: [1],
     SEEK_END: [2],
@@ -754,7 +755,7 @@ export const SEEK_ = {
     SEEK_HOLE: [4]
 };
 
-export const SCHED_ = {
+export const SCHED_:KernelEnum = {
     SCHED_NORMAL: [0],
     SCHED_FIFO: [1],
     SCHED_RR: [2],
@@ -770,24 +771,24 @@ export const SCHED_ = {
     SCHED_FLAG_UTIL_CLAMP_MIN: [0x20],
     SCHED_FLAG_UTIL_CLAMP_MAX: [0x40]
 };
-export const TIMER = {
+export const TIMER:KernelEnum = {
     TFD_TIMER_ABSTIME: [(1 << 0)],
     TFD_TIMER_CANCEL_ON_SET: [(1 << 1)]
 };
-export const RWF = {
+export const RWF:KernelEnum = {
     RWF_HIPRI: [0x00000001],
     RWF_DSYNC: [0x00000002],
     RWF_SYNC: [0x00000004],
     RWF_NOWAIT: [0x00000008],
     RWF_APPEND: [0x00000010]
 };
-export const SECCOMP = {
+export const SECCOMP:KernelEnum = {
     SECCOMP_SET_MODE_STRICT: [0],
     SECCOMP_SET_MODE_FILTER: [1],
     SECCOMP_GET_ACTION_AVAIL: [2],
     SECCOMP_GET_NOTIF_SIZES: [3]
 };
-export const LOCK = {
+export const LOCK:KernelEnum = {
 	LOCK_SH: [1],
 	LOCK_EX: [2],
 	LOCK_NB: [4],
@@ -797,7 +798,7 @@ export const LOCK = {
 	LOCK_WRITE: [128],
 	LOCK_RW: [192]
 };
-export const FALLOC = {
+export const FALLOC:KernelEnum = {
 	FALLOC_FL_KEEP_SIZE: [0x01],
 	FALLOC_FL_PUNCH_HOLE: [0x02],
 	FALLOC_FL_NO_HIDE_STALE: [0x04],
@@ -806,11 +807,11 @@ export const FALLOC = {
 	FALLOC_FL_INSERT_RANGE: [0x20],
 	FALLOC_FL_UNSHARE_RANGE: [0x40],
 };
-export const PKEY = {
+export const PKEY:KernelEnum = {
     PKEY_DISABLE_ACCESS:	[0x1],
     PKEY_DISABLE_WRITE:	[0x2]
 };
-export const CLONE = {
+export const CLONE:KernelEnum = {
     CLONE_NEWTIME: [0x00000080],
     CLONE_VM: [0x00000100],
     CLONE_FS: [0x00000200],
@@ -837,11 +838,13 @@ export const CLONE = {
     CLONE_NEWNET: [0x40000000],
     CLONE_IO: [0x80000000]
 }
-export const RUSAGE = {
+
+export const RUSAGE:KernelEnum = {
     RUSAGE_SELF:		[0],
     RUSAGE_CHILDREN:		[-1]
 }
-export const IPC = {
+
+export const IPC:KernelEnum = {
     IPC_RMID: [0], /* remove resource */
     IPC_SET: [1], /* set ipc_perm options */
     IPC_STAT: [2], /* get ipc_perm options */
@@ -850,13 +853,66 @@ export const IPC = {
     IPC_EXCL:   [0o0002000],   /* fail if key exists */
     IPC_NOWAIT: [0o0004000]   /* return error on wait */
 }
-export const MSG = {
+
+export const MSG:KernelEnum = {
     MSG_STAT: [11],
     MSG_INFO: [12],
     MSG_STAT_ANY: [13],
     MSG_NOERROR: [0o010000],
     MSG_EXCEPT: [0o020000],
     MSG_COPY: [0o040000]
+}
+
+export const CONSTANTS:KernelConstMapping = {
+    K: K,
+    FMODE:FMODE,
+    O_:O_,
+    INOTIFY_FLAGS:INOTIFY_FLAGS,
+    INOTIFY_MASK:INOTIFY_MASK,
+    RES:RES,
+    EPOLL_CTL:EPOLL_CTL,
+    EPOLL_EV:EPOLL_EV,
+    SPLICE:SPLICE,
+    SYNC_FILE:SYNC_FILE,
+    AF_:AF_,
+    SOCK_:SOCK_,
+    PF_:PF_,
+    PTRACE_:PTRACE_,
+    MADV_:MADV_,
+    MLOCK:MLOCK,
+    PR_:PR_,
+    S_:S_,
+    MS_:MS_,
+    MCL_:MCL_,
+    MAP_:MAP_,
+    CLOCK:CLOCK,
+    MNT_:MNT_,
+    PROT_:PROT_,
+    ITIMER:ITIMER,
+    MFD:MFD,
+    AT_:AT_,
+    PERSO:PERSO,
+    F_:F_,
+    FUTEX:FUTEX,
+    SIG_FLAG:SIG_FLAG,
+    S:S,
+    MOUNT:MOUNT,
+    MEMBARRIER_FLAG:MEMBARRIER_FLAG,
+    MEMBARRIER_CMD:MEMBARRIER_CMD,
+    IOPRIO_WHO:IOPRIO_WHO,
+    IOPRIO_CLASS:IOPRIO_CLASS,
+    SEEK_:SEEK_,
+    SCHED_:SCHED_,
+    TIMER:TIMER,
+    RWF:RWF,
+    SECCOMP:SECCOMP,
+    LOCK:LOCK,
+    FALLOC:FALLOC,
+    PKEY:PKEY,
+    CLONE:CLONE,
+    RUSAGE: RUSAGE,
+    IPC: IPC,
+    MSG: MSG
 }
 //
 export const E:ErrorCodeList = {
@@ -1019,7 +1075,7 @@ export const I = {
         }
     }
 }
-export const ERR:IStringIndex = {};
+export const ERR:ErrorCodeMapping = {};
 
 for(const k in E){
     E[k][2] = k;
@@ -1030,6 +1086,10 @@ function l( val:number, list:any){
     for(const k in list) if(val == list[k][0]) return k;
     return val;
 }
+
+export enum CAP {
+    CAP_SYS_NICE
+};
 
 export const X = {
     RANGE: function(p:NativePointerValue){
@@ -1144,6 +1204,10 @@ export const X = {
         return l(f,FUTEX);
     },
     PTRACE: function(f:number){
+        return l(f,PTRACE_);
+    },
+    PTRACE_DATA: function(f:number){
+
         return l(f,PTRACE_);
     },
     NODMODE: function(f:number){

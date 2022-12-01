@@ -11,6 +11,7 @@ import {InterruptorAgent} from "../common/InterruptorAgent.js";
 import {AbstractInterruptorFactory} from "../common/AbstractInterruptorFactory.js";
 import {Utils} from "../common/Utils.js";
 import {LinuxX64InterruptorAgent, KAPI} from "./LinuxX64InterruptorAgent.js";
+import {KernelAPI} from "../kernelapi/Types";
 
 
 

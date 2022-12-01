@@ -1,4 +1,4 @@
-import {InterruptorAgent} from "../common/InterruptorAgent.js";
+import {InterruptorAgent, InterruptorAgentConfig} from "../common/InterruptorAgent.js";
 import {InterruptorGenericException} from "../common/InterruptorException.js";
 import {
     T,
@@ -7,33 +7,22 @@ import {
     SyscallCallingConvention,
     SyscallSignature,
     InterruptSignatureMap,
-    SyscallParamSignature
+    SyscallParamSignature, SyscallMapping, SyscallInfo, RichCpuContext
 } from "../common/Types.js";
 import * as DEF from "../kernelapi/LinuxArm64Flags.js";
 import {TypedData} from "../common/TypedData.js";
 import {SVC} from "../syscalls/LinuxAarch64Syscalls.js";
 import {IStringIndex} from "../utilities/IStringIndex.js";
 import {DebugUtils} from "../common/DebugUtils.js";
+import {KernelAPI} from "../kernelapi/Types";
 
 interface RichContextOptions extends Arm64CpuContext {
     _extra?:any;
     [name:string] :any;
 }
 
-interface ExtraContext {
-    orig?:NativePointer;
-    FD?:any;
-    WD?:any;
-    SOCKFD?:any;
-    DFD?:any;
-    [name:string] :any;
-}
-
-interface RichArm64CpuContext extends Arm64CpuContext, IStringIndex {
-    dxc?:ExtraContext;
-    log?:string;
+interface RichArm64CpuContext extends RichCpuContext, Arm64CpuContext, IStringIndex {
     dxcOpts?:RichContextOptions;
-    dxcRet?:any;
 }
 
 
@@ -41,11 +30,6 @@ interface RichArm64CpuContext extends Arm64CpuContext, IStringIndex {
 
 // GPR = Global Purpose Register prefix => x/r
 const GPR = "x";
-const SVC_NUM = 0;
-const SVC_NAME = 1;
-const SVC_ARG = 3;
-const SVC_RET = 4;
-const SVC_ERR = 5;
 
 //{AT_, E, MAP_, X}
 const AT_ = DEF.AT_;
@@ -54,7 +38,7 @@ const MAP_ = DEF.MAP_;
 const X = DEF.X;
 
 const SVC_MAP_NUM:any = {};
-const SVC_MAP_NAME:IStringIndex = {};
+const SVC_MAP_NAME:SyscallMapping = {};
 
 SVC.map((x) => {
     SVC_MAP_NAME[x[1]] = x;
@@ -62,10 +46,9 @@ SVC.map((x) => {
 });
 
 
-export const KAPI = {
-    CONST: DEF,
-    SVC: SVC_MAP_NAME,
-    SVC_ARG: SVC_ARG,
+export const KAPI:KernelAPI = {
+    CONST: DEF.CONSTANTS,
+    SYSC: SVC_MAP_NAME,
     ERR: DEF.ERR
 };
 
@@ -84,6 +67,16 @@ const CC:SyscallCallingConvention = {
     ARG5: 'x5',
     PC: 'pc'
 };
+
+
+
+export interface LinuxAarch64InterruptorAgentConfig extends InterruptorAgentConfig {
+    svc?:any;
+    hvc?:any;
+    filter_name?:any;
+    filter_num?:any;
+}
+
 
 /**
  * This class is the main part of tracing and parsing part. It provides every parts
@@ -104,7 +97,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
     smc_hk: any = {};
     irq_hk: any = {};
 
-    constructor(pConfig:any, pDoFollowThread:any, pInterrupts:InterruptSignatureMap) {
+    constructor(pConfig:LinuxAarch64InterruptorAgentConfig, pDoFollowThread:any, pInterrupts:InterruptSignatureMap) {
         super(pConfig, pDoFollowThread, pInterrupts);
         this.configure(pConfig);
     }
@@ -437,6 +430,22 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
                     }
                     pContext.dxcOpts[pIndex] = rVal;
                     break;
+                case L.PTRACE:
+                    switch (pFormat.f) {
+                        case X.PTRACE_DATA:
+                            if (Array.isArray(pFormat.r)) {
+                                const t:number|string[] = [];
+                                pFormat.r.map((x:number|string) => t.push(pContext[x]));
+                                p += `data* =${t}`;
+                            } else {
+                                p += `data* =${ pContext[pFormat.r] }`;
+                            }
+                            break;
+                        default:
+                            p += `(ignored)`;
+                            break;
+                    }
+                    break;
                 case L.DSTRUCT:
                     if(this.types!=null && this.types[pFormat.f] != null){
                         if (pContext.dxcOpts._extra == null) pContext.dxcOpts._extra = [];
@@ -507,7 +516,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
             return;
         }
 
-        pContext.dxcRET = sys[SVC_RET];
+        pContext.dxcRET = sys[SyscallInfo.RET];
 
         let s = "", p= "";
         pContext.dxcOpts = [];

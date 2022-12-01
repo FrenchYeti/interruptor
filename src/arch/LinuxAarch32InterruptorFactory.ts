@@ -10,14 +10,16 @@ import {InterruptorAgent} from "../common/InterruptorAgent.js";
 import {AbstractInterruptorFactory} from "../common/AbstractInterruptorFactory.js";
 import {LinuxArm64InterruptorAgent, KAPI} from "./LinuxArm64InterruptorAgent.js";
 import {Utils} from "../common/Utils.js";
-import {LinuxAarch32InterruptorAgent} from "./LinuxAarch32InterruptorAgent.js";
+import {LinuxAarch32InterruptorAgent, LinuxAarch32InterruptorAgentConfig} from "./LinuxAarch32InterruptorAgent.js";
+import {KernelAPI} from "../kernelapi/Types";
 
 
 
 
 export class LinuxAarch32InterruptorFactory extends AbstractInterruptorFactory {
 
-    KAPI:any = KAPI;
+    KAPI:KernelAPI = KAPI;
+    
     T:any = T;
     L:any = L;
     X:any = X;
@@ -75,7 +77,7 @@ export class LinuxAarch32InterruptorFactory extends AbstractInterruptorFactory {
      * To create a new Frida agent
      * @param pConfig
      */
-    newAgentTracer(pConfig: any):InterruptorAgent {
+    newAgentTracer(pConfig: LinuxAarch32InterruptorAgentConfig):InterruptorAgent {
 
         const agent = new LinuxAarch32InterruptorAgent(pConfig, LinuxAarch32InterruptorFactory._followThread);
         //agent.buildScope();
