@@ -4,6 +4,7 @@ import {L, SyscallSignature, T} from "../common/Types.js";
 
 const E = DEF.E;
 const X = DEF.X;
+const CAP = DEF.CAP;
 const _ = TypedData.from;
 
 
@@ -191,7 +192,7 @@ export const SVC:SyscallSignature[] = [
     [54,"fchownat",0x36,[A.DFD,A.CONST_PATH,A.UID,A.GID,A.ACCESS_FLAGS]],
     [55,"fchown",0x37,[A.FD,A.UID,A.GID]],
     [56,"openat",0x38,[A.DFD, A.CONST_FNAME,A.OFLAGS,A.OMODE],RET.OPENAT],
-    [57,"close",0x39,[A.FD]],
+    [57,"close",0x39,[A.FD],{t:T.INT32, e:[E.EBDAF, E.INTR, E.EIO, E.ENOSPC, E.EDQUOT]}],
     [58,"vhangup",0x3a,[]],
     [59,"pipe2",0x3b,[{t:T.POINTER64, n:"pipefd", l:L.PIPEFD},{t:T.INT32, n:"flags", l:L.FLAG, f:X.PIPE_FLAG}]],
     [60,"quotactl",0x3c,["unsigned int cmd",A.CONST_NAME.copy("special"),"qid_t id","void *addr"]],
@@ -251,7 +252,7 @@ export const SVC:SyscallSignature[] = [
     [114,"clock_getres",0x72,[A.CLKID,A.KERNEL_TIMESPEC.copy("*tp")]],
     [115,"clock_nanosleep",0x73,[A.CLKID,"int flags",A.CONST_KERNEL_TIMESPEC.copy("*rqtp"),A.KERNEL_TIMESPEC.copy("*rmtp")]],
     [116,"syslog",0x74,["int type",A.OUTPUT_CHAR_BUFFER,A.OUTPUT_BUFFER_LEN]],
-    [117,"ptrace",0x75,[{t:T.LONG, n:"request", l:L.FLAG, f:X.PTRACE },{t:T.LONG, n:"pid", l:L.PID },A.ADDR,"unsigned long data"]],
+    [117,"ptrace",0x75,[{t:T.LONG, n:"request", l:L.FLAG, f:X.PTRACE },{t:T.LONG, n:"pid", l:L.PID },A.ADDR,{t:T.POINTER64, n:"data", l:L.PTRACE, r:"x1", f:X.PTRACE_DATA }]],
     [118,"sched_setparam",0x76,[A.PID,A.SCHED_PARAM]],
     [119,"sched_setscheduler",0x77,[A.PID,A.SCHED_POLICY,A.SCHED_PARAM]],
     [120,"sched_getscheduler",0x78,[A.PID]],
