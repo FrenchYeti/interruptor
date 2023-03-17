@@ -13,8 +13,26 @@ import {TypedData} from "../common/TypedData.js";
 import {SWI} from "../syscalls/LinuxAarch32Syscalls.js";
 import {IStringIndex} from "../utilities/IStringIndex";
 import {KernelAPI, KernelEnum} from "../kernelapi/Types";
+import {Utils} from "../common/Utils";
 
 
+function printBackTrace(pContext:any):void {
+    console.log(Thread.backtrace(pContext, Backtracer.ACCURATE).map(DebugSymbol.fromAddress).join('\n') + '\n');
+}
+
+function printCpuContext(ctx:any){
+
+    console.log(`
+    \x1b[1; 
+\tr0=${ctx.r0}
+\tr1=${ctx.r1} \t r2=${ctx.r2} \t r3=${ctx.r3} 
+\tr4=${ctx.r4} \t r5=${ctx.r5} \t r6=${ctx.r6} 
+\tr7=${ctx.r7} \t pc=${ctx.pc} \t lp=${ctx.lp} 
+    \x1b[0m 
+    `);
+
+
+}
 //{AT_, E, MAP_, X}
 const AT_ = DEF.CONSTANTS.AT_ as KernelEnum;
 const MAP_ = DEF.CONSTANTS.MAP_ as KernelEnum;
@@ -22,7 +40,7 @@ const X = DEF.X;
 
 // Syscall calling Convention for aarch32
 const CC:SyscallCallingConvention = {
-    OP: 'swi',
+    OP: 'swi', // swi
     NR: 'r7',
     RET: 'r0',
     ARG0: 'r0',
@@ -47,6 +65,8 @@ interface RichArmCpuContext extends RichCpuContext, ArmCpuContext, IStringIndex 
 
 const SYSC_MAP_NUM:any = {};
 const SYSC_MAP_NAME:SyscallMapping = {};
+
+const SO_LOADED:any = {};
 
 SWI.map(x => {
     SYSC_MAP_NAME[x[1]] = x;
@@ -86,6 +106,10 @@ export class LinuxAarch32InterruptorAgent extends InterruptorAgent implements IS
     filter_name: string[] = [];
     filter_num: string[] = [];
     svc_hk: any = {};
+
+    __match:string|null=null;
+    __callconst_called = false;
+    __started = false;
 
     constructor(pConfig:LinuxAarch32InterruptorAgentConfig, pDoFollowThread:any) {
         super(pConfig, pDoFollowThread);
@@ -236,24 +260,147 @@ export class LinuxAarch32InterruptorAgent extends InterruptorAgent implements IS
         let self=this;
         let do_dlopen:NativePointer = null, call_ctor:NativePointer = null, scopedTrace:NativePointer[] = [];
         let extra:any = null;
+        let libcformatbuffer = null;
+        let libcformatlog = null;
+        let callfunc = null;
+        let callarr = null;
+        let dlsym = null;
         let match:string=null;
+        let callconst_called=false;
+        let callarr_called=false;
+
+        console.log("Base address = "+Process.findModuleByName('linker').base )
         //let opts = pOptions;
         Process.findModuleByName('linker').enumerateSymbols().forEach(sym => {
+/*
+            if(sym.type==="function"){
+                console.log(JSON.stringify(sym));
+            }
+*/
             if (sym.name.indexOf('do_dlopen') >= 0) {
                 do_dlopen = sym.address;
             } else if (sym.name.indexOf('call_constructor') >= 0) {
                 call_ctor = sym.address;
+            } else if (sym.name.indexOf("call_function")>= 0){
+                callfunc = sym.address
+            }/* else if (sym.name.indexOf("call_array")>= 0){
+                callarr = sym.address
+            } /* else if (sym.name.indexOf("__dl_dlsym")>= 0){
+                dlsym = sym.address;
+            }  else if (sym.name.indexOf("__dl___libc_format_buffer")>= 0){
+                libcformatbuffer = sym.address
+            } else if (sym.name.indexOf("__dl___libc_format_log")>= 0){
+                libcformatlog = sym.address
+            } /*else if (sym.name.indexOf("call_function")>= 0){
+                callfunc = sym.address
             } else if(sym.name.indexOf('__dl__ZN11ScopedTrace3EndEv') >= 0){
                 scopedTrace.push(sym.address);
             } else if(sym.name.indexOf('__dl__ZL24debuggerd_signal_handleriP7siginfo')>=0){
                 scopedTrace.push(sym.address);
-            }
+            }*/
         });
+
+        if(libcformatbuffer!=null){
+            console.log("__dl___libc_format_buffer found at "+libcformatbuffer)
+            Interceptor.attach(libcformatbuffer, {
+                onEnter: function(args){
+                    const msg = args[2].readUtf8String();
+                    const argn = msg.split('%');
+                    let fmtargs = "";
+                    if(argn.length>1){
+                        for(let i=1; i<argn.length; i++){
+                            if(argn[i][0]==='s')
+                                fmtargs+= i+"="+(this.context as any)['r'+(2+i)].readCString()+", ";
+                            else
+                                fmtargs+= i+"="+(this.context as any)['r'+(2+i)]+", ";
+                        }
+                    }
+
+                    console.log("[LINKER] fmt buffer "+args[2].readUtf8String()+" "+fmtargs); //.readUtf8String())
+                    //printBackTrace(this.context);
+                    //printCpuContext(this.context);
+                }
+            })
+        }
+
+        if(libcformatlog!=null){
+            console.log("__dl___libc_format_log found")
+            Interceptor.attach(libcformatlog, {
+                onEnter: function(args){
+                    let msg = args[2].readUtf8String();
+                    //printBackTrace(this.context);
+                    console.log("[LINKER] log> "+args[1]+" :: "+msg);
+                }
+            })
+        }
+
+        if(callarr!=null){
+            console.log("callarr found")
+            Interceptor.attach(callarr, {
+                onEnter: function(args){
+                    let msg = args[1].readUtf8String();
+                    console.log("[LINKER] callarr>  "+msg);
+                }
+            })
+        }
+
+        if(callfunc!=null){
+            console.log("callfunc found")
+            Interceptor.attach(callfunc, {
+                onEnter: function(args){
+
+                    console.log("[LINKER] callfunc> "+args[1].readCString());
+                    if((self.__match !== null) && (self.__callconst_called===true) && (args[1].readCString()=="DT_INIT")){
+
+                        self.__callconst_called = false;
+
+                        console.warn("Start hooks");
+                        const tmp = self.__match;
+
+                        console.warn("[LINKER] Loading '"+self.__match+"'");
+                        if(pOptions!=null && pOptions.hasOwnProperty('condition')){
+                            if(!pOptions.condition(self.__match, this)){
+                                self.__match = null;
+                                return ;
+                            }
+                        }
+
+                        console.warn("[INTERRUPTOR][STARTING] Module '"+self.__match+"' is loading, tracer will start");
+                        self.__match = null;
+
+                        if(self.__started===false){
+                            self.__started = true;
+                            self.start();
+
+                            if(pOptions!=null && pOptions.hasOwnProperty('threshold')){
+                                console.log(self.loadCtr, pOptions.threshold)
+                                if(self.loadCtr < pOptions.threshold){
+                                    self.loadCtr++;
+                                    self.onStart( tmp, this);
+                                }else{
+                                    console.warn("[INTERRUPTOR][STARTING] Threshold reached");
+                                }
+                            }else{
+                                self.onStart( tmp, this);
+                            }
+                        }else{
+                            console.warn("[INTERRUPTOR][STARTING] Skipped.");
+                        }
+
+
+
+                    }
+                }
+            })
+        }
+
+        //console.log("\ndl_open = "+do_dlopen+"\ncall_ctor = "+call_ctor+"\n _scopedTrace ="+scopedTrace.join(':'));
 
         if(this.emulator && scopedTrace.length>0){
             do {
                 const ptr = scopedTrace.pop();
                 Interceptor.replace(ptr,  new NativeCallback(():number=>{
+                    console.log("[EMULATOR MODE] Mock of __dl__ZL24debuggerd_signal_handleriP7siginfo  executed");
                     return 1;
                 }, 'int', ['int']));
             }while (scopedTrace.length > 0);
@@ -272,46 +419,29 @@ export class LinuxAarch32InterruptorAgent extends InterruptorAgent implements IS
         }
 
 
-        Interceptor.attach(do_dlopen, function (args) {
-            const p = args[0].readUtf8String();
 
-            if(p!=null && pModuleRegExp.exec(p) != null){
-                match = p;
+        Interceptor.attach(do_dlopen, {
+            onEnter: function (args) {
+                const p = args[0].readUtf8String();
+
+                if(p!=null && pModuleRegExp.exec(p) != null){
+                    self.__match = p;
+                    //SO_LOADED[p] = false;
+                    console.log("[LINKER][DO_DLOPEN]["+this.context.pc+"] + "+p);
+                }else{
+                    console.log("[LINKER][DO_DLOPEN]["+this.context.pc+"] - "+p);
+                }
+
+
             }
         });
 
         Interceptor.attach(call_ctor, {
             onEnter:function () {
-                if(match==null) return;
-                const tmp = match;
 
-                console.warn("[LINKER] Loading '"+match+"'");
-                if(pOptions!=null && pOptions.hasOwnProperty('condition')){
-                    if(!pOptions.condition(match, this)){
-                        match = null;
-                        return ;
-                    }
-                }
-
-
-
-                console.warn("[INTERRUPTOR][STARTING] Module '"+match+"' is loading, tracer will start");
-                match = null;
-
-                self.start();
-
-                if(pOptions!=null && pOptions.hasOwnProperty('threshold')){
-                    //console.log(self.loadCtr, pOptions.threshold)
-                    if(self.loadCtr < pOptions.threshold){
-                        self.loadCtr++;
-                        self.onStart( tmp, this);
-                    }else{
-                        console.warn("[INTERRUPTOR][STARTING] Threshold reached");
-                        match = null;
-                        return ;
-                    }
-                }else{
-                    self.onStart( tmp, this);
+                if(self.__match!==null && self.__match.length>0){
+                    console.log("[LINKER][CALL_CTOR]["+this.context.pc+"] for "+self.__match);
+                    self.__callconst_called = true;
                 }
 
             }
@@ -518,6 +648,7 @@ export class LinuxAarch32InterruptorAgent extends InterruptorAgent implements IS
         const sysNR = pContext[CC.NR];
         const sysSignature = SYSC_MAP_NUM[ sysNR.toInt32() ];
 
+        console.log(sysSignature);
         if(sysSignature==null) {
             console.log( ' ['+this.locatePC(pContext)+']   \x1b[35;01m' + CC.OP + ' ('+sysNR+')\x1b[0m =<unknow>');
             return;
@@ -687,7 +818,9 @@ export class LinuxAarch32InterruptorAgent extends InterruptorAgent implements IS
         | StalkerArmIterator
         | StalkerThumbIterator, pInstruction:any, pExtra:any):number{
 
-
+        let mode = 'N';
+        let addr = null;
+        let insn =  null;
         const self = this;
 
         let keep = 1;
@@ -718,8 +851,28 @@ export class LinuxAarch32InterruptorAgent extends InterruptorAgent implements IS
 
 
         // debug
-//        console.log("["+pInstruction.address+" : "+pInstruction.address.sub(pExtra.mod.__mod.base)+"] > "+Instruction.parse(pInstruction.address));
-   //     console.log("["+pInstruction.address+"] > "+Instruction.parse(pInstruction.address));
+       //console.log("["+pInstruction.address+" : "+pInstruction.address.sub(pExtra.mod.__mod.base)+"] > "+Instruction.parse(pInstruction.address));
+
+        // instrumentation time
+        /*try{
+            mode = 'N';
+            addr = parseInt(pInstruction.address,16);
+            insn = Instruction.parse(pInstruction.address)
+        }catch(e){
+            mode = 'T';
+            addr = addr+1;
+            insn = Instruction.parse(ptr(addr));
+        }
+
+        console.log("[0x"+addr.toString(16)+"]["+mode+"] > "+insn);
+
+
+        if(insn!=null){
+            if(insn.toString().match(/swi/ig)){
+                console.log("------------- [0x"+addr+"] T > "+insn);
+            }
+            insn = null;
+        }*/
 
 
         /*

@@ -134,7 +134,7 @@ RET.LINKAT = {t:T.INT32, e:RET.LINK.e.concat([E.EBADF, E.ENOTDIR]) };
 RET.IO = {t:T.INT32, e:RET.INFO.e.concat([E.EBADF, E.EFAULT, E.ENOSYS]) };
 
 
-export const SWI:SyscallSignature[] = [
+export const SWI:SyscallSignature[]     = [
     [0,"restart_syscall",0x00,[]],
     [1,"exit",0x01,[{ t:T.INT32, n:"error_code" }]],
     [2,"fork",0x02,[]],

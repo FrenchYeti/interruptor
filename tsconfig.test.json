@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "lib": ["es2017"],
+    "target": "es2017", // es2017
+    "module": "ES2020", // "commonjs",
+    "declaration": true,
+    "outDir": ".",
+    "removeComments": true,
+    "sourceMap": false,
+    "strictNullChecks": false,
+    "typeRoots": [
+      "node_modules/@types"
+    ],
+    "esModuleInterop": true,
+    "types": [
+      "node",
+      "frida-gum",
+      "chai",
+      "mocha"
+	]
+  },
+  "include": [
+    "src/**/*.ts",
+    "*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.spec.ts",
+    "./test/",
+    "./dist/"
+  ]
+}
