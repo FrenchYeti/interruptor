@@ -84,9 +84,4 @@ export class LinuxX64InterruptorFactory extends AbstractInterruptorFactory {
     }
 
 
-    newStandaloneTracer(){
-        return null ;
-    }
-
-
 }

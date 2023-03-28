@@ -1,9 +1,10 @@
 import {InterruptorAgent} from "../common/InterruptorAgent.js";
 import {InterruptorGenericException} from "../common/InterruptorException.js";
-import {T, L, F} from "../common/Types.js";
+import {T, L, F, RichCpuContext, CallConvention, SyscallCallingConvention} from "../common/Types.js";
 import * as DEF from "../kernelapi/LinuxX64Flags.js";
 import {TypedData} from "../common/TypedData.js";
 import {SYSC} from "../syscalls/LinuxX64Syscalls.js";
+import {KernelAPI} from "../kernelapi/Types";
 
 // GPR = Global Purpose Register prefix => x/r
 const GPR = "e";
@@ -19,7 +20,7 @@ const MAP_ = DEF.MAP_;
 const X = DEF.X;
 
 // Calling Convention
-const CC = {
+const CC:SyscallCallingConvention = {
     OP: 'syscall',
     NR: 'rax',
     RET: 'rax',
@@ -29,6 +30,7 @@ const CC = {
     ARG3: 'r10',
     ARG4: 'r8',
     ARG5: 'r9',
+    PC: 'rip'
 };
 
 
@@ -42,10 +44,9 @@ SYSC.map(x => {
 
 let isExcludedFn:any = null;
 
-export const KAPI = {
-    CONST: DEF,
-    SVC: SYSC_MAP_NAME,
-    SVC_ARG: SYSC_ARG,
+export const KAPI:KernelAPI = {
+    CONST: DEF.CONSTANTS,
+    SYSC: SYSC_MAP_NAME,
     ERR: DEF.ERR
 };
 
@@ -206,17 +207,23 @@ export class LinuxX64InterruptorAgent extends InterruptorAgent{
     }
 
     startOnLoad( pModuleRegExp:RegExp, pOptions:any = null):any {
-        let self=this, do_dlopen = null, call_ctor = null, scopedTrace = null, extra = null, match=null;
+        let self=this, do_dlopen = null, call_ctor = null, scopedTrace = null, extra = null;
+        let match:string|null=null;
         //let opts = pOptions;
         Process.findModuleByName('linker64').enumerateSymbols().forEach(sym => {
+
             if (sym.name.indexOf('do_dlopen') >= 0) {
+                // console.log(sym.name);
                 do_dlopen = sym.address;
             } else if (sym.name.indexOf('call_constructor') >= 0) {
+                // console.log(sym.name);
                 call_ctor = sym.address;
             } else if(sym.name.indexOf('__dl__ZN11ScopedTrace3EndEv') >= 0){
+                // console.log(sym.name);
                 scopedTrace = sym.address;
             }
         });
+
 
         if(this.emulator && scopedTrace!=null){
             const ScopedTraceEnd = new NativeCallback(():number=>{
@@ -406,7 +413,7 @@ export class LinuxX64InterruptorAgent extends InterruptorAgent{
                     t = rVal.toInt32();
                     if (pContext.dxc.WD!=null && t >= 0)
                         p += `${t}  ${pContext.dxc.WD[t + ""]}  `;
-                        p += rVal + " ";
+                    p += rVal + " ";
                     break;
                 case L.VADDR:
                     if (pFormat.f == null) {
@@ -416,8 +423,8 @@ export class LinuxX64InterruptorAgent extends InterruptorAgent{
                 case L.FLAG:
                     if (pFormat.r != null) {
                         if (Array.isArray(pFormat.r)) {
-                            let t = [];
-                            pFormat.r.map(x => t.push(pContext[x]));
+                            let t:any[] = [];
+                            pFormat.r.map((x:string) => t.push(pContext[x]));
                             p += `${(pFormat.f)(rVal, t)}`;
                         } else {
                             p += `${(pFormat.f)(rVal, [pContext[pFormat.r]])}`;
@@ -438,6 +445,7 @@ export class LinuxX64InterruptorAgent extends InterruptorAgent{
                         p += `${rVal} ${pFormat.c===true ? this.parseStruct( pContext, this.types[pFormat.f].getStruct(), pFormat.v, "" ) : ""}`;
                         break;
                     }
+                    // TODO ?
                 default:
                     switch (pFormat.t) {
                         case T.STRING:
@@ -463,7 +471,7 @@ export class LinuxX64InterruptorAgent extends InterruptorAgent{
      * @param pFormat
      * @param pIndex
      */
-    parseRawArgs( pContext:any, pFormat:any, pIndex:number):any {
+    parseRawArgs( pContext:RichCpuContext, pFormat:any, pIndex:number):any {
 
         if (typeof pFormat === "string") {
             return` ${pFormat} = ${pContext[ CC['ARG'+pIndex] ] }`;
@@ -474,8 +482,10 @@ export class LinuxX64InterruptorAgent extends InterruptorAgent{
 
     traceSyscall( pContext:any, pHookCfg:any = null){
 
+
         const sysNR = pContext[CC.NR];
         const sysSignature = SYSC_MAP_NUM[ sysNR.toInt32() ];
+
 
         if(sysSignature==null) {
             console.log( ' ['+this.locateRIP(pContext)+']   \x1b[35;01m' + CC.OP + ' ('+sysNR+')\x1b[0m =<unknow>');
@@ -486,7 +496,7 @@ export class LinuxX64InterruptorAgent extends InterruptorAgent{
 
         let s:string = "", p:string= "";
         pContext.dxcOpts = [];
-        sysSignature[3].map((vVal,vOff) => {
+        sysSignature[3].map((vVal:any,vOff:number) => {
             p += ` ${this.parseRawArgs(pContext, vVal, vOff)} ,`;
         });
         s = `${sysSignature[1]} ( ${p.slice(0,-1)} ) `;
@@ -614,7 +624,7 @@ export class LinuxX64InterruptorAgent extends InterruptorAgent{
 
         // to process extra data such as structured data edited or passed as args
         if(pContext.dxcOpts != null && pContext.dxcOpts._extra){
-            pContext.dxcOpts._extra.map( x => {
+            pContext.dxcOpts._extra.map((x:any) => {
 
                 console.log(` ${x.n} = `+this.parseStruct(
                     pContext,
@@ -639,7 +649,7 @@ export class LinuxX64InterruptorAgent extends InterruptorAgent{
         let keep = 1;
         if(pExtra.onLeave == 1){
 
-            pStalkerInterator.putCallout(function(context) {
+            pStalkerInterator.putCallout(function(context:RichCpuContext) {
                 const n = context[CC.NR].toInt32();
 
                 if(context.dxc==null) context.dxc = {FD:{}};
@@ -666,9 +676,14 @@ export class LinuxX64InterruptorAgent extends InterruptorAgent{
         if (pInstruction.mnemonic === CC.OP) {
 
             //console.log("SVC Found : > "+pInstruction.mnemonic);
-            pExtra.onLeave =  1;
-            pStalkerInterator.putCallout(function(context) {
+            const m = Process.findModuleByAddress(pInstruction.address);
+            console.log((m!=null?m.name:'<null>')+"["+pInstruction.address+"] > "+Instruction.parse(pInstruction.address));
 
+
+            pExtra.onLeave =  1;
+            pStalkerInterator.putCallout(function(context:RichCpuContext) {
+
+                //console.log(context[CC.PC]);
                 const n = context[CC.NR].toInt32();
 
                 if(isExcludedFn!=null && isExcludedFn(n)) return;

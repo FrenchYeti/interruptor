@@ -110,7 +110,20 @@ interface ExtraContext {
     [name:string] :any;
 }
 
-export interface RichCpuContext {
+export type RegisterName = string;
+
+export interface CallConvention {
+    OP: RegisterName,
+    NR: RegisterName,
+    RET: RegisterName,
+    ARG0: RegisterName,
+    ARG1: RegisterName,
+    ARG2: RegisterName,
+    ARG3: RegisterName,
+    ARG4: RegisterName,
+    ARG5: RegisterName,
+}
+export interface RichCpuContext extends IStringIndex {
     dxc?:ExtraContext;
     log?:string;
     dxcOpts?:any;
