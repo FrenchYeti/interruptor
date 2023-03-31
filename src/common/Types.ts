@@ -5,7 +5,7 @@
  * @interface
  * @export
  */
-import {IStringIndex} from "../utilities/IStringIndex";
+import {IStringIndex} from "../utilities/IStringIndex.js";
 
 export interface SyscallCallingConvention extends IStringIndex {
     /**
