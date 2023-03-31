@@ -1,6 +1,6 @@
 import {IStringIndex} from "../utilities/IStringIndex.js";
-import {ErrorCodeList, ErrorCodeMapping} from "../common/Types";
-import {KernelEnum, KernelConstMapping} from "./Types";
+import {ErrorCodeList, ErrorCodeMapping} from "../common/Types.js";
+import {KernelEnum, KernelConstMapping} from "./Types.js";
 
 
 export const K:KernelEnum = {

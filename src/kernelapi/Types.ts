@@ -1,5 +1,5 @@
 import {IStringIndex} from "../utilities/IStringIndex";
-import {ErrorCodeMapping, SyscallMapping} from "../common/Types";
+import {ErrorCodeMapping, SyscallMapping} from "../common/Types.js";
 
 export interface KernelConstant {
     /**
