@@ -14,7 +14,7 @@ import {TypedData} from "../common/TypedData.js";
 import {SVC} from "../syscalls/LinuxAarch64Syscalls.js";
 import {IStringIndex} from "../utilities/IStringIndex.js";
 import {DebugUtils} from "../common/DebugUtils.js";
-import {KernelAPI} from "../kernelapi/Types";
+import {KernelAPI} from "../kernelapi/Types.js";
 
 interface RichContextOptions extends Arm64CpuContext {
     _extra?:any;

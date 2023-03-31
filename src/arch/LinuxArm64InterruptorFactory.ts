@@ -10,7 +10,7 @@ import {InterruptorAgent} from "../common/InterruptorAgent.js";
 import {AbstractInterruptorFactory} from "../common/AbstractInterruptorFactory.js";
 import {LinuxArm64InterruptorAgent, KAPI, LinuxAarch64InterruptorAgentConfig} from "./LinuxArm64InterruptorAgent.js";
 import {SVC} from "../syscalls/LinuxAarch64Syscalls.js";
-import {KernelAPI} from "../kernelapi/Types";
+import {KernelAPI} from "../kernelapi/Types.js";
 
 
 

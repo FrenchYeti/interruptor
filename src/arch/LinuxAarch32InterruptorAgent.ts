@@ -11,10 +11,8 @@ import {
 import * as DEF from "../kernelapi/LinuxArm64Flags.js";
 import {TypedData} from "../common/TypedData.js";
 import {SWI} from "../syscalls/LinuxAarch32Syscalls.js";
-import {IStringIndex} from "../utilities/IStringIndex";
-import {KernelAPI, KernelEnum} from "../kernelapi/Types";
-import {Utils} from "../common/Utils";
-
+import {IStringIndex} from "../utilities/IStringIndex.js";
+import {KernelAPI, KernelEnum} from "../kernelapi/Types.js";
 
 function printBackTrace(pContext:any):void {
     console.log(Thread.backtrace(pContext, Backtracer.ACCURATE).map(DebugSymbol.fromAddress).join('\n') + '\n');
