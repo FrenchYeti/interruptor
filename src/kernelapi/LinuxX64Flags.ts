@@ -551,7 +551,7 @@ export const PROT_:KernelEnum = {
     PROT_WRITE: [2],
     PROT_EXEC: [4],
     PROT_SEM: [8], // arch sensitive
-    // PROT_SAO: 0x10,  // not implemented on ARM ?
+    // PROT_SAO: [0x10],  // not implemented on ARM ?
     PROT_GROWSDOWN: [0x01000000],
     PROT_GROWSUP: [0x02000000]
 };
@@ -592,7 +592,7 @@ export const PERSO:KernelEnum = {
     STICKY_TIMEOUTS: [0x4000000],
     ADDR_LIMIT_3GB: [0x8000000]
 };
-const F_:KernelEnum = {
+export const F_:KernelEnum = {
     F_DUPFD: [0],
     F_GETFD: [1],
     F_SETFD: [2],
@@ -750,7 +750,7 @@ export const IOPRIO_CLASS:KernelEnum =  {
 };
 
 
-export const SEEK:KernelEnum = {
+export const SEEK_:KernelEnum = {
     SEEK_SET: [0],
     SEEK_CUR: [1],
     SEEK_END: [2],
@@ -758,7 +758,7 @@ export const SEEK:KernelEnum = {
     SEEK_HOLE: [4]
 };
 
-export const SCHED:KernelEnum = {
+export const SCHED_:KernelEnum = {
     SCHED_NORMAL: [0],
     SCHED_FIFO: [1],
     SCHED_RR: [2],
@@ -902,8 +902,8 @@ export const CONSTANTS:KernelConstMapping = {
     MEMBARRIER_CMD:MEMBARRIER_CMD,
     IOPRIO_WHO:IOPRIO_WHO,
     IOPRIO_CLASS:IOPRIO_CLASS,
-    SEEK_:SEEK,
-    SCHED_:SCHED,
+    SEEK_:SEEK_,
+    SCHED_:SCHED_,
     TIMER:TIMER,
     RWF:RWF,
     SECCOMP:SECCOMP,
@@ -914,7 +914,7 @@ export const CONSTANTS:KernelConstMapping = {
     RUSAGE: RUSAGE,
     IPC: IPC,
     MSG: MSG
-};
+}
 
 //
 export const E:ErrorCodeList = {
@@ -1188,10 +1188,10 @@ export const X = {
         return l(f,CLOCK);
     },
     SCHED: function(f:any){
-        return l(f,SCHED);
+        return l(f,SCHED_);
     },
     SEEK: function(f:any){
-        return l(f,SEEK);
+        return l(f,SEEK_);
     },
     INOTIFY_FLAGS: function(f:any){
         return l(f,INOTIFY_FLAGS);
