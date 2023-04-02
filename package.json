@@ -8,9 +8,7 @@
     "src/**/*.d.ts",
     "src/**/*.js",
     "*.d.ts",
-    "*.js",
-    "node_modules/@reversense/*.js",
-    "node_modules/@reversense/*.ts"
+    "*.js"
   ],
   "scripts": {
     "build": "npx tsc",
