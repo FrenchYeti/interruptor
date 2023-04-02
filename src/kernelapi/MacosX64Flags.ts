@@ -884,6 +884,13 @@ const COPYFILE_FLAGS:KernelEnum = {
     COPYFILE_DATA: [0],
 }
 
+
+const IDTYPE:KernelEnum = {
+    P_ALL: [0],
+    P_PGID: [1],
+    P_PID: [2]
+}
+
 export const CONSTANTS:KernelConstMapping = {
     PROC_INFO:PROC_INFO,
     COPYFILE_FLAGS:COPYFILE_FLAGS,
@@ -937,7 +944,8 @@ export const CONSTANTS:KernelConstMapping = {
     CLONE:CLONE,
     RUSAGE: RUSAGE,
     IPC: IPC,
-    MSG: MSG
+    MSG: MSG,
+    IDTYPE:IDTYPE
 }
 
 //
@@ -1134,6 +1142,9 @@ export const X = {
         else
             return  0; // no flag
     },
+    IDTYPE: function(f){
+        return l(f,IDTYPE);
+    },
     PKEY_ACL: function(f){
         return l(f,PKEY);
     },
@@ -1226,6 +1237,9 @@ export const X = {
         return l(f,FUTEX);
     },
     PTRACE: function(f){
+        return l(f,PTRACE_);
+    },
+    PTRACE_DATA: function(f:number){
         return l(f,PTRACE_);
     },
     PROC_INFO: function(f){
