@@ -1,6 +1,6 @@
 {
   "name": "@reversense/interruptor",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "A Frida-based library for hook system call (and interrupts) and produce strace-like output ",
   "main": "index.js",
   "type": "module",
@@ -8,7 +8,9 @@
     "src/**/*.d.ts",
     "src/**/*.js",
     "*.d.ts",
-    "*.js"
+    "*.js",
+    "node_modules/@reversense/*.js",
+    "node_modules/@reversense/*.ts"
   ],
   "scripts": {
     "build": "npx tsc",
@@ -38,13 +40,15 @@
   "homepage": "https://github.com/FrenchYeti/interruptor#readme",
   "devDependencies": {
     "@types/chai": "^4.3.4",
-    "@types/frida-gum": "^17.3.0",
     "@types/mocha": "^10.0.0",
     "@types/node": "^17.0.10",
     "chai": "^4.3.7",
     "mocha": "^10.1.0",
     "ts-node": "^10.9.1",
     "typescript": "^4.5.4"
+  },
+  "dependencies": {
+    "@types/frida-gum": "^17.3.0"
   },
   "directories": {
     "example": "examples"
