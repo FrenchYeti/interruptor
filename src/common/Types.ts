@@ -102,7 +102,7 @@ export type ErrorCodeConst = number;
  * @interface
  */
 interface ExtraContext {
-    orig?:NativePointer;
+    orig?:any; //NativePointer;
     FD?:any;
     WD?:any;
     SOCKFD?:any;
