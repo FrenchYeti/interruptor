@@ -556,7 +556,11 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
      * @param {any} pErrEnum The list of error codes
      */
     getSyscallError( pErrRet:number, pErrEnum:any[]):any {
+        if( (pErrEnum==null) || (pErrEnum.length == 0) ) return pErrRet;
+
         for(let i=0; i<pErrEnum.length ; i++){
+            if(pErrEnum[i]==null) continue;
+
             if(pErrRet === -pErrEnum[i][0] ){
                 return pErrRet+' '+pErrEnum[i][2];
             }
