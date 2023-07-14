@@ -1,4 +1,4 @@
-import {InterruptorAgent, InterruptorAgentConfig} from "../common/InterruptorAgent.js";
+import {InterruptorAgent, InterruptorAgentConfig, StartOnLoadOpts} from "../common/InterruptorAgent.js";
 import {InterruptorGenericException} from "../common/InterruptorException.js";
 import {
     T,
@@ -254,7 +254,7 @@ export class LinuxAarch32InterruptorAgent extends InterruptorAgent implements IS
         return l;
     }
 
-    startOnLoad( pModuleRegExp:RegExp, pOptions:any = null):any {
+    startOnLoad( pModuleRegExp:RegExp, pOptions:StartOnLoadOpts = {}):any {
         let self=this;
         let do_dlopen:NativePointer = null, call_ctor:NativePointer = null, scopedTrace:NativePointer[] = [];
         let extra:any = null;

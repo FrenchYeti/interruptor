@@ -1,4 +1,4 @@
-import {InterruptorAgent} from "../common/InterruptorAgent.js";
+import {InterruptorAgent, StartOnLoadOpts} from "../common/InterruptorAgent.js";
 import {InterruptorGenericException} from "../common/InterruptorException.js";
 import {T, L, F, RichCpuContext, CallConvention, SyscallCallingConvention} from "../common/Types.js";
 import * as DEF from "../kernelapi/LinuxX64Flags.js";
@@ -206,11 +206,14 @@ export class LinuxX64InterruptorAgent extends InterruptorAgent{
         return l;
     }
 
-    startOnLoad( pModuleRegExp:RegExp, pOptions:any = null):any {
+    startOnLoad( pModuleRegExp:RegExp, pOptions:StartOnLoadOpts = {}):any {
         let self=this, do_dlopen = null, call_ctor = null, scopedTrace = null, extra = null;
         let match:string|null=null;
+
+        const linkerMod = pOptions.hasOwnProperty('linker')? pOptions.linker : "linker64";
+
         //let opts = pOptions;
-        Process.findModuleByName('linker64').enumerateSymbols().forEach(sym => {
+        Process.findModuleByName(linkerMod).enumerateSymbols().forEach(sym => {
 
             if (sym.name.indexOf('do_dlopen') >= 0) {
                 // console.log(sym.name);

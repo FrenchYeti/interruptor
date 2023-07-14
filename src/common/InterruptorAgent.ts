@@ -60,6 +60,27 @@ interface InterruptorHooks {
 interface OuputHighlightOpts {
     syscalls?: any
 }
+
+/**
+ * @interface
+ */
+export interface StartOnLoadOpts {
+    /**
+     * Stalker threshold
+     * @type {number}
+     * @field
+     */
+    threshold?:number;
+
+    /**
+     * Linker Module name as recognized by Process.findModuleByName(XXX)
+     * @type {string}
+     * @field
+     */
+    linker?:string;
+
+    condition?:(match:any, self:any)=>boolean;
+}
 /**
  * Configuration of the output printer
  * @interface
@@ -104,7 +125,10 @@ export interface InterruptorAgentConfig {
 }
 
 
-
+/**
+ * Represent a tracing agent
+ * @class
+ */
 export class InterruptorAgent implements IStringIndex {
 
 
@@ -551,7 +575,7 @@ export class InterruptorAgent implements IStringIndex {
      * @param pModuleRegExp
      * @param pOptions
      */
-    startOnLoad( pModuleRegExp:RegExp, pOptions:any = null):any {
+    startOnLoad( pModuleRegExp:RegExp, pOptions:StartOnLoadOpts = {}):any {
         return new Error("Dynamic loading is not supported");
     }
 
@@ -729,5 +753,4 @@ Support struct args implemented : ${notImpl.length}/${Object.keys(types).length}
 Support err code : ${stats.err}/${pSyscallList.length}
         `)
     }
-
 }

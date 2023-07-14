@@ -1,4 +1,4 @@
-import {InterruptorAgent, InterruptorAgentConfig} from "../common/InterruptorAgent.js";
+import {InterruptorAgent, InterruptorAgentConfig, StartOnLoadOpts} from "../common/InterruptorAgent.js";
 import {InterruptorGenericException} from "../common/InterruptorException.js";
 import {
     T,
@@ -184,7 +184,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
      * @param pModuleRegExp
      * @param pOptions
      */
-    startOnLoad( pModuleRegExp:RegExp, pOptions:any = null):any {
+    startOnLoad( pModuleRegExp:RegExp, pOptions:StartOnLoadOpts = {}):any {
         let  do_dlopen = null, call_ctor = null, scopedTrace = null, match:string|null=null;
         // eslint-disable-next-line @typescript-eslint/no-this-alias
         const self=this;
