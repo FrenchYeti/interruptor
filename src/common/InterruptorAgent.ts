@@ -27,10 +27,45 @@ export interface NumericRange {
 
 export type ScopeFilter = number | string | ((...args: any[])=>boolean) | RegExp | NumericRange;
 
+/**
+ * Scope object is used to configure modules and syscalls
+ * included/excluded from tracing.
+ *
+ * If some modules are put into `exclude` list, then default policy will be to trace ANY modules
+ * If some modules are put into `include` list, then default policy will be to DON'T trace any modules except authorized modules
+ *
+ * ```
+ * Interruptor.newAgentTracer({
+ *     followThread: true,
+ *     scope: {
+ *         syscalls: {
+ *             exclude:  [/clock_gettime/]
+ *         },
+ *         modules: {
+ *             exclude: [/linker/]
+ *         }
+ *     }
+ * }).start();
+ * ```
+ *
+ * @interface
+ */
 export interface Scope {
     _policy?:F;
+    /**
+     * A list of filter to apply to select modules/syscalls to exclude
+     * @type {ScopeFilter[]}
+     */
     exclude?:ScopeFilter[];
+    /**
+     * A list of filter to apply to select modules/syscalls to include
+     * @type {ScopeFilter[]}
+     */
     include?:ScopeFilter[];
+    /**
+     * An optional function to check if an interruption number is excluded or not
+     * @type {ScopeFilter[]}
+     */
     isExcluded?:((num:number)=>boolean)
 }
 
