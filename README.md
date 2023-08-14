@@ -142,7 +142,7 @@ npm run build
 
 When it is done, just copy one of examples into repository root folder :
 ```
-cp ./examples/android/simple_trace.ts .
+cp ./examples/android/simple_strace.ts .
 ```
 
 
