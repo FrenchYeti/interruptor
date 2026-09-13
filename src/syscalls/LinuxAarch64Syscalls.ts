@@ -421,8 +421,9 @@ export const SVC:SyscallSignature[] = [
     [283,"membarrier",0x11b,[{t:T.INT32, n:"cmd", l:L.FLAG, f:X.MEMBARRIER_CMD}, {t:T.INT32, n:"glag", l:L.FLAG, f:X.MEMBARRIER_FLAG}]],
     [284,"mlock2",0x11c,[A.START_ADDR,A.SIZE,{t:T.UINT32, n:"flags", l:L.FLAG, f:X.MLOCK }]],
     [285,"copy_file_range",0x11d,[{t:T.UINT32, n:"fd_in", l:L.FD},A.LOFFSET.copy('*off_in'),{t:T.UINT32, n:"fd_out", l:L.FD},A.LOFFSET.copy('*off_out'),A.SIZE,"unsigned int RESERVED flags"]],
-    [286,"preadv2",0x11e,[A.LFD,A.IOVEC,A.LEN,A.LOFFSET,A.RWF]],
-    [287,"pwritev2",0x11f,[A.LFD,A.IOVEC,A.LEN,A.LOFFSET,A.RWF]],
+    [286,"preadv2",0x11e,[A.LFD,A.IOVEC,A.LEN,A.LOFFSET,"unsigned long pos_h",A.RWF]],
+    [287,"pwritev2",0x11f,[A.LFD,A.IOVEC,A.LEN,A.LOFFSET,"unsigned long pos_h",A.RWF]],
+    // 4.9
     [288,"pkey_mprotect",0x120,[A.ADDR,A.SIZE,A.MPROT,A.PKEY]],
     [289,"pkey_alloc",0x121,["unsigned long RESERVED flags",{t:T.ULONG, n:"access_rights", l:L.FLAG, f:X.PKEY_ACL }],A.PKEY.asReturn()],
     [290,"pkey_free",0x122,[A.PKEY]],
