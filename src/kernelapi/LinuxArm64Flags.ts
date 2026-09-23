@@ -2,6 +2,8 @@ import {IStringIndex} from "../utilities/IStringIndex.js";
 import {ErrorCodeList, ErrorCodeMapping} from "../common/Types.js";
 import {KernelEnum, KernelConstMapping} from "./Types.js";
 
+// GPR = Global Purpose Register prefix => x/r
+export const GPR = "x";
 
 export const K:KernelEnum = {
     P_ALL: [0],
