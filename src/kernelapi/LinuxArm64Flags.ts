@@ -1094,7 +1094,7 @@ export enum CAP {
 };
 
 export const X = {
-    RANGE: function(p:NativePointerValue){
+    RANGE: function(p:NativePointerValue, ctx:any = null   ){
         try{
             const m = Process.getModuleByAddress(p);
             return `${p} (${m!=null ? m.name : 'null'})`;
@@ -1102,34 +1102,34 @@ export const X = {
             return `${p}`;
         }
     },
-    LINKAT: function(f:number){
+    LINKAT: function(f:number, ctx:any = null){
         if(f == AT_.AT_SYMLINK_FOLLOW[0] )
             return "AT_SYMLINK_FOLLOW";
         else
             return  0; // no flag
     },
-    MLOCK: function(f:number){
+    MLOCK: function(f:number, ctx:any = null){
         if(f == MLOCK.MLOCK_ONFAULT[0] )
             return "MLOCK_ONFAULT";
         else
             return  0; // no flag
     },
-    PKEY_ACL: function(f:number){
+    PKEY_ACL: function(f:number, ctx:any = null){
         return l(f,PKEY);
     },
-    RUSAGE: function(f:number){
+    RUSAGE: function(f:number, ctx:any = null){
         return l(f, RES);
     },
-    RES: function(f:number){
+    RES: function(f:number, ctx:any = null){
         return l(f,RES);
     },
-    RWF: function(f:number){
+    RWF: function(f:number, ctx:any = null){
         return l(f,RWF);
     },
-    SECCOMP: function(f:number){
+    SECCOMP: function(f:number, ctx:any = null){
         return l(f,SECCOMP);
     },
-    SECCOMP_FLAGS: function(f:number,cmd:any){
+    SECCOMP_FLAGS: function(f:number, ctx:any, cmd:any){
         return f;
         /*
         switch(cmd){
@@ -1148,71 +1148,90 @@ export const X = {
         }
         */
     },
-    MEMBARRIER_CMD: function(f:number){
+    MEMBARRIER_CMD: function(f:number, ctx:any = null){
         return l(f,MEMBARRIER_CMD);
     },
-    MEMBARRIER_FLAG: function(f:number){
+    MEMBARRIER_FLAG: function(f:number, ctx:any = null){
         return l(f,MEMBARRIER_FLAG);
     },
-    ACCESS_FLAGS: function(f:number){
+    ACCESS_FLAGS: function(f:number, ctx:any = null){
         return stringifyBitmapArr(f, {
             AT_SYMLINK_NOFOLLOW: [0x100],
             AT_NO_AUTOMOUNT: [0x800],
             AT_EMPTY_PATH: [0x1000]
         });
     },
-    EPOLL_EV: function(f:number){
+    EPOLL_EV: function(f:number, ctx:any = null){
         return stringifyBitmapArr(f, EPOLL_EV);
     },
-    SPLICE: function(f:number){
+    SPLICE: function(f:number, ctx:any = null){
         return stringifyBitmapArr(f, SPLICE);
     },
-    ITIMER: function(f:number){
+    ITIMER: function(f:number, ctx:any = null){
         return stringifyBitmapArr(f, ITIMER);
     },
-    SYNC_FILE: function(f:number){
+    SYNC_FILE: function(f:number, ctx:any = null){
         return stringifyBitmapArr(f, SYNC_FILE);
     },
-    EPOLL_CTL: function(f:number){
+    EPOLL_CTL: function(f:number, ctx:any = null){
         return stringifyBitmapArr(f, EPOLL_CTL);
     },
-    EPOLL_FLAG: function(f:number){
+    EPOLL_FLAG: function(f:number, ctx:any = null){
         return stringifyBitmapArr(f, {
             EPOLL_CLOEXEC: [O_.O_CLOEXEC]
         });
     },
-    PRCTL_OPT: function(f:number){
+    PRCTL_OPT: function(f:number, ctx:any = null){
         return l(f,PR_.OPT);
     },
-    CLONE: function(f:number){
+    PRCTL_ARGS: function(f:number, ctx:any , cmd:any){
+        let args = [];
+        switch(ctx.dxcOpts[":"+GPR+"0"]){
+            case "PR_SET_VMA":
+                args.push({ label:"name", val: ptr(f).readCString() });
+                break;
+            case "PR_SET_NAME":
+                args.push({ label:"name", val: ptr(f).readCString() });
+                break;
+            case "PR_SET_DUMPABLE":
+                args.push({ label:"flag", val:["SUID_DUMP_DISABLE","SUID_DUMP_USER"][f] }) ;
+                break;
+            default:
+                args.push({ val: f })
+                break;
+        }
+
+        return args;
+    },
+    CLONE: function(f:number, ctx:any = null){
         return stringifyBitmapArr(f,CLONE);
     },
-    CLK: function(f:number){
+    CLK: function(f:number, ctx:any = null){
         return l(f,CLOCK);
     },
-    SCHED: function(f:number){
+    SCHED: function(f:number, ctx:any = null){
         return l(f,SCHED_);
     },
-    SEEK: function(f:number){
+    SEEK: function(f:number, ctx:any = null){
         return l(f,SEEK_);
     },
-    INOTIFY_FLAGS: function(f:number){
+    INOTIFY_FLAGS: function(f:number, ctx:any = null){
         return l(f,INOTIFY_FLAGS);
     },
-    INOTIFY_MASK: function(f:number){
+    INOTIFY_MASK: function(f:number, ctx:any = null){
         return l(f,INOTIFY_MASK);
     },
-    FUTEX_OPE: function(f:number){
+    FUTEX_OPE: function(f:number, ctx:any = null){
         return l(f,FUTEX);
     },
-    PTRACE: function(f:number){
+    PTRACE: function(f:number, ctx:any = null){
         return l(f,PTRACE_);
     },
-    PTRACE_DATA: function(f:number){
+    PTRACE_DATA: function(f:number, ctx:any = null){
 
         return l(f,PTRACE_);
     },
-    NODMODE: function(f:number){
+    NODMODE: function(f:number, ctx:any = null){
         // todo parse dev
         return stringifyBitmapArr(f, {
             S_IFREG: S_.S_IFREG,
@@ -1222,13 +1241,13 @@ export const X = {
             S_IFSOCK: S_.S_IFSOCK
         });
     },
-    FLOCK: function(f:number){
+    FLOCK: function(f:number, ctx:any = null){
         return l(f,LOCK);
     },
-    FALLOC: function(f:number){
+    FALLOC: function(f:number, ctx:any = null){
         return l(f,FALLOC);
     },
-    IOPRIO_WHICH: function(f:number, cmd:any){
+    IOPRIO_WHICH: function(f:number, ctx:any, cmd:any){
         return l(f, IOPRIO_WHO);
         /*console.error(f, cmd);
         switch(f){
@@ -1240,37 +1259,37 @@ export const X = {
                 break;
         }*/
     },
-    PERSO: function(f:number){
+    PERSO: function(f:number, ctx:any = null){
         return l(f,PERSO);
     },
-    TYPEID: function(f:number){
+    TYPEID: function(f:number, ctx:any = null){
         return l(f,K);
     },
-    XATTR: function(f:number){
+    XATTR: function(f:number, ctx:any = null){
         return ["default","XATTR_CREATE","XATTR_REPLACE"][f];
     },
-    UNLINK: function(f:number){
+    UNLINK: function(f:number, ctx:any = null){
         return l(f,{AT_REMOVEDIR:AT_.AT_REMOVEDIR});
     },
-    PIPE_FLAG: (f:number)=>{
+    PIPE_FLAG: (f:number, ctx:any = null)=>{
         return stringifyBitmapArr(f,{O_NONBLOCK:O_.O_NONBLOCK,O_CLOEXEC :O_.O_CLOEXEC});
     },
-    SOCKF: (f:number)=>{
+    SOCKF: (f:number, ctx:any = null)=>{
         return stringifyBitmapArr(f,{SOCK_NONBLOCK:O_.O_NONBLOCK,SOCK_CLOEXEC :O_.O_CLOEXEC});
     },
-    SFD: (f:number)=>{
+    SFD: (f:number, ctx:any = null)=>{
         return stringifyBitmapArr(f,{SFD_NONBLOCK:O_.O_NONBLOCK,SFD_CLOEXEC :O_.O_CLOEXEC});
     },
-    TFD: (f:number)=>{
+    TFD: (f:number, ctx:any = null)=>{
         return stringifyBitmapArr(f,{TFD_NONBLOCK:O_.O_NONBLOCK,TFD_CLOEXEC :O_.O_CLOEXEC});
     },
-    TIMER: (f:number)=>{
+    TIMER: (f:number, ctx:any = null)=>{
         return stringifyBitmapArr(f,TIMER);
     },
-    FNCTL: function(f:number){
+    FNCTL: function(f:number, ctx:any = null){
         return l(f,F_);
     },
-    FCNTL_RET: function(f:number, cmd:any){
+    FCNTL_RET: function(f:number, ctx:any, cmd:any){
         switch (cmd) {
             case F_.F_GETFL:
                 return X.O_MODE(f);
@@ -1279,7 +1298,7 @@ export const X = {
                 return f;
         }
     },
-    FCNTL_ARGS: function(f:number, cmd:any){
+    FCNTL_ARGS: function(f:number, ctx:any, cmd:any){
         switch (cmd) {
             case F_.F_SETFL:
                 return X.O_MODE(f);
@@ -1288,14 +1307,14 @@ export const X = {
                 return f;
         }
     },
-    MSGF: function(f:number){
+    MSGF: function(f:number, ctx:any = null){
         return stringifyBitmapArr(f,{
             IPC_NOWAIT: [IPC.IPC_NOWAIT],
             MSG_EXCEPT : [MSG.MSG_EXCEPT],
             MSG_NOERROR: [MSG.MSG_NOERROR],
         });
     },
-    MSGCTL: function(f:number){
+    MSGCTL: function(f:number, ctx:any = null){
         return l(f,{
             IPC_STAT: [IPC.IPC_NOWAIT],
             IPC_SET : [IPC.IPC_SET],
@@ -1306,62 +1325,62 @@ export const X = {
             MSG_STAT_ANY: [MSG.MSG_STAT_ANY]
         });
     },
-    DEL_KEXT: function(f:number){
+    DEL_KEXT: function(f:number, ctx:any = null){
         return stringifyBitmapArr(f,{O_NONBLOCK:O_.O_NONBLOCK,O_TRUNC :O_.O_TRUNC});
     },
-    SIG_FLAGS: function(f:number){
+    SIG_FLAGS: function(f:number, ctx:any = null){
         return l(f,SIG_FLAG);
     },
-    SIG: function(f:number){
+    SIG: function(f:number, ctx:any = null){
         return l(f,S);
     },
-    PF: function(f:number){
+    PF: function(f:number, ctx:any = null){
         return l(f,PF_);
     },
-    SOCK: function(f:number){
+    SOCK: function(f:number, ctx:any = null){
         return stringifyBitmapArr(f,SOCK_);
     },
-    MOUNT_FLAG: function(f:number){
+    MOUNT_FLAG: function(f:number, ctx:any = null){
         return stringifyBitmapArr(f,MOUNT);
     },
-    MADV: function(f:number){
+    MADV: function(f:number, ctx:any = null){
         return l(f,MADV_);
     },
-    MCL: function(f:number){
+    MCL: function(f:number, ctx:any = null){
         return l(f,MCL_);
     },
-    MAP: function(f:number){
+    MAP: function(f:number, ctx:any = null){
         return stringifyBitmapArr(f,MAP_);
     },
-    MS: function(f:number){
+    MS: function(f:number, ctx:any = null){
         return l(f,MS_);
     },
-    ERR: function(f:number){
+    ERR: function(f:number, ctx:any = null){
         for(const k in E) if(f == E[k][0]) return k+" /* "+E[k][1]+" */";
         return null;
     },
-    ATTR: function(f:number){
+    ATTR: function(f:number, ctx:any = null){
         return f;
     },
-    UMASK: function(f:number){
+    UMASK: function(f:number, ctx:any = null){
         return stringifyBitmapArr(f,S_);
     },
-    O_FLAG: function(f:number){
+    O_FLAG: function(f:number, ctx:any = null){
         return stringifyBitmap(f,O_);
     },
-    O_MODE: function(f:number){
+    O_MODE: function(f:number, ctx:any = null){
         return stringifyBitmap(f,O_);
     },
-    F_MODE: function(f:number){
+    F_MODE: function(f:number, ctx:any = null){
         return stringifyBitmapArr(f,FMODE);
     },
-    UMOUNT: function(f:number){
+    UMOUNT: function(f:number, ctx:any = null){
         return stringifyBitmapArr(f,MNT_);
     },
-    MFD: function(f:number){
+    MFD: function(f:number, ctx:any = null){
         return stringifyBitmapArr(f,MFD);
     },
-    MPROT: function(f:number){
+    MPROT: function(f:number, ctx:any = null){
         if(f == PROT_NONE)
             return "PROT_NONE";
 

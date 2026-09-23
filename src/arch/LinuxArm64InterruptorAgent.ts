@@ -15,6 +15,7 @@ import {SVC} from "../syscalls/LinuxAarch64Syscalls.js";
 import {IStringIndex} from "../utilities/IStringIndex.js";
 import {DebugUtils} from "../common/DebugUtils.js";
 import {KernelAPI} from "../kernelapi/Types.js";
+import {GPR} from "../kernelapi/LinuxArm64Flags.js";
 
 interface RichContextOptions extends Arm64CpuContext {
     _extra?:any;
@@ -26,10 +27,6 @@ interface RichArm64CpuContext extends RichCpuContext, Arm64CpuContext, IStringIn
 }
 
 
-
-
-// GPR = Global Purpose Register prefix => x/r
-const GPR = "x";
 
 //{AT_, E, MAP_, X}
 const AT_ = DEF.AT_;
@@ -334,7 +331,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
 
             }
             //console.log(JSON.stringify(fmt),val,i);
-            v = this.parseValue( pContext, val, fmt, i);
+            v = this.parseValue( pContext, val, fmt, GPR+i);
             msg += ` \t${fmt.n} = ${v},${pSeparator}`;
         }
 
@@ -349,9 +346,10 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
      * @param pFormat
      * @param pIndex
      */
-    parseValue( pContext:any, pValue:any, pFormat:SyscallParamSignature, pIndex:number):any {
+    parseValue( pContext:any, pValue:any, pFormat:SyscallParamSignature, pIndex:string):any {
         let p = "", rVal: any = null, data:any=null, t: any = null;
 
+        //console.log("parseValue",pFormat,pValue,pIndex);
 
         if (typeof pFormat === "string") {
             p = pValue; //` ${pFormat} = ${pValue}`;
@@ -408,7 +406,21 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
                     if (pFormat.f == null) {
                         p += (pContext.dxcOpts[pFormat.n] = rVal);
                         //break;
+                    }else{
+                        p += `${(pFormat.f)(rVal)}`;
                     }
+                    break;
+                case L.VARIADIC:
+                    if (pFormat.t != T.POINTER64){
+                        data = rVal;
+                    }else{
+                        data = ptr(rVal); //readU64();
+                    }
+
+                    p = (pFormat.f)(rVal, pContext)
+
+                    pContext.dxcOpts[pIndex] = rVal;
+
                     break;
                 case L.FLAG:
                     if (pFormat.t != T.POINTER64){
@@ -417,18 +429,20 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
                         data = ptr(rVal); //readU64();
                     }
 
+                    pContext.dxcOpts[pIndex] = rVal;
                     if (pFormat.r != null) {
                         if (Array.isArray(pFormat.r)) {
                             const t:number|string[] = [];
                             pFormat.r.map((x:number|string) => t.push(pContext[x]));
-                            p += `${(pFormat.f)(rVal, t)}`;
+
+                            p += `${(pFormat.f)(rVal, pContext, t)}`;
                         } else {
-                            p += `${(pFormat.f)(rVal, [pContext[pFormat.r]])}`;
+                            p += `${(pFormat.f)(rVal, pContext,  [pContext[pFormat.r]])}`;
                         }
                     } else {
-                        p += `${(pFormat.f)(rVal)}`;
+                        p += `${pContext.dxcOpts[":"+pIndex] = (pFormat.f)(rVal, pContext)}`;
+                        //p += `${(pFormat.f)(rVal, pContext)}`;
                     }
-                    pContext.dxcOpts[pIndex] = rVal;
                     break;
                 case L.PTRACE:
                     switch (pFormat.f) {
@@ -484,11 +498,21 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
      */
     parseRawArgs( pContext:any, pFormat:SyscallParamSignature, pIndex:number):any {
 
-        if (typeof pFormat === "string") {
-            return` ${pFormat} = ${pContext[GPR + pIndex] }`;
-        } else {
-            return` ${pFormat.n} = ${this.parseValue( pContext, pContext[GPR + pIndex], pFormat, pIndex ) }`;
+        const res = this.parseValue( pContext, pContext[GPR + pIndex], pFormat, GPR+pIndex );
+
+        if(typeof res == "object" && res!==null && Array.isArray(res)){
+            return {
+                n:false,
+                s: res.map((x:any,i:number) => `${x.label ?? "arg"+i } = ${x.val}`).join(", ")
+            }
+        }else{
+            if (typeof pFormat === "string") {
+                return { n:true, s:` ${pFormat} = ${pContext[GPR + pIndex] }` };
+            } else {
+                return { n:true, s:` ${pFormat.n} = ${res}` };
+            }
         }
+
     }
 
     /**
@@ -511,19 +535,28 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
         const sysNR = pContext[CC.NR];
         const sys:SyscallSignature = SVC_MAP_NUM[ sysNR.toInt32() ];
 
-        if(sys==null) {
+        if(sys==null /*|| sysNR>290*/) {
             console.log( ' ['+this.locatePC(pContext.pc)+']   \x1b[35;01m' + CC.OP + ' ('+sysNR+')\x1b[0m Syscall=<unknow>');
             return;
         }
 
+
+        //console.log("trace > ",sysNR.toInt32());
+
         pContext.dxcRET = sys[SyscallInfo.RET];
 
-        let s = "", p= "";
-        pContext.dxcOpts = [];
-        sys[3].map((vVal,vOff) => {
-            //const rVal = pContext["x"+vOff];
-            p += ` ${this.parseRawArgs(pContext, vVal, vOff)} ,`;
-        });
+        let s = "", p= "", res = null;
+        pContext.dxcOpts = {};
+
+        for(let i=0; i<sys[3].length ; i++){
+            res = this.parseRawArgs(pContext, sys[3][i], i);
+
+            p += ` ${res.s} ${res.n ? ',' : ''}`;
+            if(!res.n){
+                break;
+            }
+        }
+
         s = `${sys[1]} ( ${p.slice(0,-1)} ) `;
 
 
@@ -642,7 +675,7 @@ export class LinuxArm64InterruptorAgent extends InterruptorAgent implements IStr
 
                     break;
                 case L.FCNTL_RET:
-                    ret = X.FCNTL_RET(RET, pContext.x1);
+                    ret = X.FCNTL_RET(RET, pContext, pContext.x1);
                     break;
                 case L.VADDR:
                     if(ret.e != null ){

@@ -261,8 +261,13 @@ export enum L {
     FUTEX,
     TIMER,
     MQDES,// struct always parsed,
-    PTRACE
-
+    PTRACE,
+    PIDFD, // pid descriptor
+    URINGFD, // uring descriptor
+    FSCTXFD,
+    MNTFD,
+    RULESETFD,
+    VARIADIC
 }
 
 /**
